@@ -11,17 +11,25 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Mock user data (in real apps, you'd call your backend)
-    if (email === "user@example.com" && password === "password123") {
-      login({ id: "1", name: "John Doe", email });
-      router.push("/"); // or /app if your home page is nested
-    } else {
-      alert("Invalid credentials");
-    }
-  };
+    const res = await fetch("http://localhost:8000/api/v1/auth/login", {
+      method: "POST",
+      credentials: "include", // ⬅️ must include cookies
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email, password }),
+    });
+
+  if (res.ok) {
+    router.push("/"); // Redirect to protected page
+  } else {
+    alert("Invalid credentials");
+  }
+};
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">

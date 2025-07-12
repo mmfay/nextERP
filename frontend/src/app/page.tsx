@@ -2,6 +2,8 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { SecureButton } from "@/app/components/SecureButton";
+import { Permissions } from "@/app/config/permissions";
 
 export default function Home() {
   const router = useRouter();
@@ -63,12 +65,13 @@ export default function Home() {
             Read our docs
           </a>
 
-          <button
+          <SecureButton
+            permission={Permissions.BASE}
             onClick={handleLogout}
             className="rounded-full border border-transparent transition-colors flex items-center justify-center bg-red-600 hover:bg-red-700 text-white font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
           >
             Logout
-          </button>
+          </SecureButton>
         </div>
       </main>
 

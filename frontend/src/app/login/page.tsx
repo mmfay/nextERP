@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/context/AuthContext";
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { refreshUser } = useAuth();  // ← pull in refreshUser
   const router = useRouter();
 
   const [email, setEmail] = useState("");
@@ -16,20 +16,18 @@ export default function LoginPage() {
 
     const res = await fetch("http://localhost:8000/api/v1/auth/login", {
       method: "POST",
-      credentials: "include", // ⬅️ must include cookies
-      headers: {
-        "Content-Type": "application/json",
-      },
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
     });
 
-  if (res.ok) {
-    router.push("/"); // Redirect to protected page
-  } else {
-    alert("Invalid credentials");
-  }
-};
-
+    if (res.ok) {
+      await refreshUser(); // ← this triggers /me and sets user/permissions
+      router.push("/");    // ← redirect to main page
+    } else {
+      alert("Invalid credentials");
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">

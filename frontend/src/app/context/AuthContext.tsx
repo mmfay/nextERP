@@ -6,42 +6,79 @@ interface User {
   id: string;
   name: string;
   email: string;
+  is_sys_admin?: boolean;
 }
 
 interface AuthContextType {
   user: User | null;
-  login: (userData: User) => void;
-  logout: () => void;
+  permissions: string[];
   isAuthenticated: boolean;
+  isLoading: boolean;
+  logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true); // ⬅️ New loading state
+  const [permissions, setPermissions] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const refreshUser = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch("http://localhost:8000/api/v1/auth/me", {
+        credentials: "include",
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setUser({
+          id: data.user.id,
+          name: data.user.name,
+          email: data.user.email,
+          is_sys_admin: data.user.is_sys_admin
+        });
+        setPermissions(data.permissions);
+      } else {
+        setUser(null);
+        setPermissions([]);
+      }
+    } catch (err) {
+      console.error("Failed to fetch /me:", err);
+      setUser(null);
+      setPermissions([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const logout = async () => {
+    await fetch("http://localhost:8000/api/v1/auth/logout", {
+      method: "POST",
+      credentials: "include",
+    });
+    setUser(null);
+    setPermissions([]);
+  };
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-    setLoading(false); // ⬅️ Done checking auth
+    refreshUser();
   }, []);
 
-  const login = (userData: User) => {
-    localStorage.setItem("user", JSON.stringify(userData));
-    setUser(userData);
-  };
-
-  const logout = () => {
-    localStorage.removeItem("user");
-    setUser(null);
-  };
-
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user }}>
-      {loading ? (
+    <AuthContext.Provider
+      value={{
+        user,
+        permissions,
+        isAuthenticated: !!user,
+        isLoading,
+        logout,
+        refreshUser,
+      }}
+    >
+      {isLoading ? (
         <div className="flex justify-center items-center min-h-screen">
           <p className="text-gray-500">Loading...</p>
         </div>
@@ -50,7 +87,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       )}
     </AuthContext.Provider>
   );
-
 };
 
 export const useAuth = () => {

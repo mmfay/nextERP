@@ -1,0 +1,8 @@
+[
+  "view_dashboard",
+  "create_invoice",
+  "approve_payment",
+  "delete_user",
+  "export_reports",
+  "base"
+]

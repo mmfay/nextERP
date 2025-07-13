@@ -36,3 +36,21 @@ def update_dimension(data: UpdateFinancialDimension):
     if not updated:
         raise HTTPException(status_code=404, detail="Dimension not found")
     return updated
+
+@router.get("/financial_dimensions/{dimension_id}/values")
+def api_get_values(dimension_id: int):
+    return get_dimension_values(dimension_id)
+
+@router.post("/financial_dimensions/{dimension_id}/values")
+def api_add_value(dimension_id: int, value: DimensionValue):
+    success = add_dimension_value(dimension_id, value)
+    if not success:
+        raise HTTPException(status_code=400, detail="Code already exists")
+    return {"success": True}
+
+@router.delete("/financial_dimensions/{dimension_id}/values/{code}")
+def api_delete_value(dimension_id: int, code: str):
+    success = delete_dimension_value(dimension_id, code)
+    if not success:
+        raise HTTPException(status_code=404, detail="Code not found")
+    return {"success": True}

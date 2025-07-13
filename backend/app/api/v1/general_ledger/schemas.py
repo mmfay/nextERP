@@ -27,3 +27,7 @@ class UpdateFinancialDimension(BaseModel):
     id: int
     name: str
     in_use: bool
+
+class DimensionValue(BaseModel):
+    code: str
+    description: str

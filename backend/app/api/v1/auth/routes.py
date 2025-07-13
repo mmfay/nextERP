@@ -17,7 +17,9 @@ USER_DB = {
         "is_sys_admin": False,
         "permissions": [
             "base",
-            "view_dashboard"
+            "view_dashboard",
+            "mod_gl",
+            "setup_gl"
         ]
     },
     "admin@example.com": {

@@ -1,8 +1,12 @@
 [
-  "view_dashboard",
-  "create_invoice",
-  "approve_payment",
-  "delete_user",
-  "export_reports",
-  "base"
+    "base",
+    "view_dashboard",
+    "create_invoice",
+    "approve_payment",
+    "delete_user",
+    "export_reports",
+    "mod_gl",
+    "mod_purch",
+    "mod_sales",
+    "setup_gl"
 ]

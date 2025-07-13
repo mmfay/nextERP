@@ -39,24 +39,30 @@ export default function Nav() {
           </button>
           {showModules && (
             <div className="absolute left-0 mt-2 w-48 bg-white dark:bg-gray-800 shadow-lg rounded-md z-10">
-              <a
-                href="/general-ledger"
-                className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"
-              >
-                General Ledger
-              </a>
-              <a
-                href="/purchasing"
-                className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"
-              >
-                Purchasing
-              </a>
-              <a
-                href="/sales"
-                className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"
-              >
-                Sales
-              </a>
+                <a
+                    href="/"
+                    className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                    Dashboard
+                </a>
+                <a
+                    href="/general_ledger"
+                    className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                    General Ledger
+                </a>
+                <a
+                    href="/purchasing"
+                    className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                    Purchasing
+                </a>
+                <a
+                    href="/sales"
+                    className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                    Sales
+                </a>
             </div>
           )}
         </div>

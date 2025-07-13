@@ -5,6 +5,9 @@ export const Permissions = {
   DELETE_USER: "delete_user",
   EXPORT_REPORTS: "export_reports",
   BASE: "base",
+  MOD_GL: "mod_gl",
+  MOD_PURCH: "mod_purch",
+  MOD_SALES: "mod_sales",
   // Add more as needed
 } as const;
 

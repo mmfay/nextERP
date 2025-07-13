@@ -25,3 +25,14 @@ def delete_main_accounts(accounts: list[str]):
     if deleted == 0:
         raise HTTPException(status_code=404, detail="No accounts deleted")
     return {"deleted": deleted}
+
+@router.get("/financial_dimensions", response_model=list[FinancialDimension])
+def get_dimensions():
+    return get_financial_dimensions()
+
+@router.put("/financial_dimensions", response_model=FinancialDimension)
+def update_dimension(data: UpdateFinancialDimension):
+    updated = update_financial_dimension(data)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Dimension not found")
+    return updated

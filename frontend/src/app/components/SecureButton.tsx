@@ -21,7 +21,6 @@ export function SecureButton({ permission, children, ...props }: Props) {
         ${props.className ?? ""}
         ${!allowed ? "opacity-50 cursor-not-allowed" : ""}
         transition-opacity duration-300 ease-in
-        ${allowed ? "opacity-0 animate-fade-in" : ""}
       `}
     >
       {children}

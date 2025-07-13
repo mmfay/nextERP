@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/context/AuthContext";
 
 export default function LoginPage() {
-  const { refreshUser } = useAuth();  // ← pull in refreshUser
+  const { refreshUser } = useAuth();
   const router = useRouter();
 
   const [email, setEmail] = useState("");
@@ -22,15 +22,15 @@ export default function LoginPage() {
     });
 
     if (res.ok) {
-      await refreshUser(); // ← this triggers /me and sets user/permissions
-      router.push("/");    // ← redirect to main page
+      await refreshUser();
+      router.push("/");
     } else {
       alert("Invalid credentials");
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
+    <div className="flex h-screen items-center justify-center bg-gray-100 dark:bg-gray-900 m-0 p-0">
       <form
         onSubmit={handleSubmit}
         className="bg-white dark:bg-gray-800 p-8 rounded shadow-md w-full max-w-md"

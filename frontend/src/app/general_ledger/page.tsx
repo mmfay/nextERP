@@ -1,14 +1,11 @@
 "use client";
 
-import Nav from "@/app/components/NavBar";
 import { SecureButton } from "@/app/components/SecureButton";
 import { Permissions } from "@/app/config/permissions";
 
 export default function GeneralLedgerPage() {
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-black text-black dark:text-white font-[family-name:var(--font-geist-sans)]">
-      <Nav />
-
+    <div className="min-h-screen bg-inherit text-inherit font-[family-name:var(--font-geist-sans)]">
       <main className="pt-24 px-8 sm:px-16 space-y-10">
         {/* Page Heading */}
         <section>
@@ -100,28 +97,28 @@ export default function GeneralLedgerPage() {
           <h2 className="text-2xl font-semibold mb-4">Setup</h2>
           <div className="flex flex-wrap gap-4">
             <SecureButton
-              permission={Permissions.MOD_GL}
+              permission={Permissions.SETUP_GL}
               onClick={() => console.log("Configure Workflows")}
               className="px-6 py-3 rounded-md bg-gray-800 hover:bg-gray-700 text-white transition"
             >
               Workflows
             </SecureButton>
             <SecureButton
-              permission={Permissions.MOD_GL}
+              permission={Permissions.SETUP_GL}
               onClick={() => console.log("Configure Account Structures")}
               className="px-6 py-3 rounded-md bg-gray-800 hover:bg-gray-700 text-white transition"
             >
               Configure Account Structures
             </SecureButton>
             <SecureButton
-              permission={Permissions.MOD_GL}
+              permission={Permissions.SETUP_GL}
               onClick={() => console.log("Configure Account Structures")}
               className="px-6 py-3 rounded-md bg-gray-800 hover:bg-gray-700 text-white transition"
             >
               Main Accounts
             </SecureButton>
             <SecureButton
-              permission={Permissions.MOD_GL}
+              permission={Permissions.SETUP_GL}
               onClick={() => console.log("Configure Account Structures")}
               className="px-6 py-3 rounded-md bg-gray-800 hover:bg-gray-700 text-white transition"
             >

@@ -18,3 +18,10 @@ def add_main_account(account: CreateMainAccount):
     if created is None:
         raise HTTPException(status_code=400, detail="Account already exists.")
     return created
+
+@router.delete("/main_accounts")
+def delete_main_accounts(accounts: list[str]):
+    deleted = delete_main_accounts_by_id(accounts)
+    if deleted == 0:
+        raise HTTPException(status_code=404, detail="No accounts deleted")
+    return {"deleted": deleted}

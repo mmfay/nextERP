@@ -1,9 +1,13 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { SecureButton } from "@/app/components/SecureButton";
 import { Permissions } from "@/app/config/permissions";
 
 export default function GeneralLedgerPage() {
+
+  const router = useRouter();
+
   return (
     <div className="min-h-screen bg-inherit text-inherit font-[family-name:var(--font-geist-sans)]">
       <main className="pt-24 px-8 sm:px-16 space-y-10">
@@ -112,7 +116,7 @@ export default function GeneralLedgerPage() {
             </SecureButton>
             <SecureButton
               permission={Permissions.SETUP_GL}
-              onClick={() => console.log("Configure Account Structures")}
+              onClick={() => router.push("/general_ledger/main_accounts")}
               className="px-6 py-3 rounded-md bg-gray-800 hover:bg-gray-700 text-white transition"
             >
               Main Accounts

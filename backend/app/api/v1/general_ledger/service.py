@@ -23,3 +23,9 @@ def create_main_account(data: CreateMainAccount) -> MainAccount | None:
     new_account = MainAccount(**data.dict())
     _main_accounts.append(new_account)
     return new_account
+
+def delete_main_accounts_by_id(account_ids: list[str]) -> int:
+    global _main_accounts
+    original_len = len(_main_accounts)
+    _main_accounts = [acct for acct in _main_accounts if acct.account not in account_ids]
+    return original_len - len(_main_accounts)

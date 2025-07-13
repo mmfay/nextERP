@@ -109,7 +109,7 @@ export default function GeneralLedgerPage() {
             </SecureButton>
             <SecureButton
               permission={Permissions.SETUP_GL}
-              onClick={() => console.log("Configure Account Structures")}
+              onClick={() => router.push("/general_ledger/configure_account_structures")}
               className="px-6 py-3 rounded-md bg-gray-800 hover:bg-gray-700 text-white transition"
             >
               Configure Account Structures

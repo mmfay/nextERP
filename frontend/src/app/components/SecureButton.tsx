@@ -8,16 +8,20 @@ type Props = React.ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 export function SecureButton({ permission, children, ...props }: Props) {
-  const { permissions, user } = useAuth();
+  const { permissions, user, isLoading } = useAuth();
   const allowed = user?.is_sys_admin || permissions.includes(permission);
+
+  if (isLoading) return null;
 
   return (
     <button
       {...props}
       disabled={!allowed || props.disabled}
-      className={`${props.className ?? ""} ${
-        !allowed ? "opacity-50 cursor-not-allowed" : ""
-      }`}
+      className={`
+        ${props.className ?? ""}
+        ${!allowed ? "opacity-50 cursor-not-allowed" : ""}
+        transition-opacity duration-300 ease-in
+      `}
     >
       {children}
     </button>

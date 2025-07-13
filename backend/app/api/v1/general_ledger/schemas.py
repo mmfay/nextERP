@@ -17,3 +17,17 @@ class CreateMainAccount(BaseModel):
     account: constr(min_length=4, max_length=4)
     description: str
     type: Literal["Asset", "Liability", "Equity", "Revenue", "Expense"]
+
+class FinancialDimension(BaseModel):
+    id: int
+    name: str
+    in_use: bool
+
+class UpdateFinancialDimension(BaseModel):
+    id: int
+    name: str
+    in_use: bool
+
+class DimensionValue(BaseModel):
+    code: str
+    description: str

@@ -1,4 +1,12 @@
-from .schemas import MainAccount, CreateMainAccount, FinancialDimension, UpdateFinancialDimension, DimensionValue
+from .schemas import (
+    MainAccount, 
+    CreateMainAccount, 
+    FinancialDimension, 
+    UpdateFinancialDimension, 
+    DimensionValue,
+    AccountCombination,
+    AccountCombinationRequest,
+)
 
 # In-memory store (can be replaced with DB later)
 _main_accounts: list[MainAccount] = [
@@ -24,6 +32,33 @@ _dimension_values: dict[int, list[DimensionValue]] = {
     1: [DimensionValue(code="01", description="Marketing"), DimensionValue(code="02", description="Finance")],
     2: [DimensionValue(code="100", description="West Coast"), DimensionValue(code="200", description="East Coast")],
     8: [DimensionValue(code="01", description="Northwest"), DimensionValue(code="02", description="Southwest")],
+}
+
+_account_combinations: dict[str, list[AccountCombination]] = {
+    "4000": [
+        AccountCombination(account="4000", dimensions={
+            "FD_1": "01",
+            "FD_2": "100",
+            "FD_3": None,
+            "FD_4": None,
+            "FD_5": None,
+            "FD_6": None,
+            "FD_7": None,
+            "FD_8": "01",
+        })
+    ],
+    "5000": [
+        AccountCombination(account="5000", dimensions={
+            "FD_1": "02",
+            "FD_2": "200",
+            "FD_3": None,
+            "FD_4": None,
+            "FD_5": None,
+            "FD_6": None,
+            "FD_7": None,
+            "FD_8": "02",
+        })
+    ]
 }
 
 def get_trial_balance():
@@ -84,3 +119,17 @@ def delete_dimension_value(dimension_id: int, code: str) -> bool:
         _dimension_values[dimension_id] = updated
         return True
     return False
+
+# -----------------------------
+# Account Combinations
+# -----------------------------
+def get_account_combinations() -> list[AccountCombination]:
+    return [combo for combos in _account_combinations.values() for combo in combos]
+
+def save_account_combinations(combos: list[AccountCombinationRequest]) -> None:
+    global _account_combinations
+    for combo in combos:
+        acct = combo.account
+        _account_combinations.setdefault(acct, []).append(
+            AccountCombination(account=acct, dimensions=combo.dimensions)
+        )

@@ -1,5 +1,5 @@
 from pydantic import BaseModel, constr
-from typing import Literal  # ✅ Comes from standard typing module
+from typing import Literal, Dict, List, Optional
 
 
 class Account(BaseModel):
@@ -31,3 +31,12 @@ class UpdateFinancialDimension(BaseModel):
 class DimensionValue(BaseModel):
     code: str
     description: str
+
+class AccountCombination(BaseModel):
+    account: str
+    dimensions: Dict[str, Optional[str]]  # e.g., {"FD_1": "01", "FD_2": None, ..., "FD_8": "02"}
+
+
+class AccountCombinationRequest(BaseModel):
+    account: str
+    dimensions: Dict[str, Optional[str]]

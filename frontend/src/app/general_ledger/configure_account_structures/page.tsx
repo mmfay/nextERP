@@ -1,63 +1,107 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { SecureButton } from "@/app/components/SecureButton";
 import { Permissions } from "@/app/config/permissions";
 import { ChevronDown, ChevronRight } from "lucide-react";
+import { fetchFinancialDimensions } from "@/lib/api/financialDimensions";
+import { fetchDimensionValues } from "@/lib/api/financialDimensionValues";
+import {
+  fetchAccountCombinations,
+  saveAccountCombinations,
+  AccountCombinationRequest,
+} from "@/lib/api/accountCombinations";
 
 const mockAccounts = [
   { account: "4000", description: "Sales Revenue" },
   { account: "5000", description: "Cost of Goods Sold" },
 ];
 
-const mockDimensions = [
-  {
-    name: "Department",
-    values: [
-      { code: "01", description: "Northwest" },
-      { code: "02", description: "Southwest" },
-    ],
-  },
-  {
-    name: "Region",
-    values: [
-      { code: "US", description: "United States" },
-      { code: "CA", description: "Canada" },
-    ],
-  },
-  {
-    name: "Project",
-    values: [
-      { code: "A100", description: "Alpha Build" },
-      { code: "B200", description: "Beta Launch" },
-    ],
-  },
-];
-
 export default function AccountStructuresPage() {
-  const [structures, setStructures] = useState({});
-  const [expandedAccounts, setExpandedAccounts] = useState(new Set());
-  const [newCombination, setNewCombination] = useState({});
+  const [structures, setStructures] = useState<Record<string, any[]>>({});
+  const [expandedAccounts, setExpandedAccounts] = useState<Set<string>>(new Set());
+  const [newCombination, setNewCombination] = useState<Record<string, string>>({});
   const [selectedAccount, setSelectedAccount] = useState("");
+  const [dimensions, setDimensions] = useState<
+    { name: string; key: string; in_use: boolean; values: { code: string; description: string }[] }[]
+  >([]);
 
-  const toggleExpand = (acct) => {
+  useEffect(() => {
+    const loadData = async () => {
+      const dimensionMeta = await fetchFinancialDimensions();
+      const fullList = await Promise.all(
+        Array.from({ length: 8 }, async (_, i) => {
+          const fd = dimensionMeta.find((d) => d.id === i + 1);
+          let values = [];
+          if (fd?.in_use) {
+            try {
+              values = await fetchDimensionValues(fd.id);
+            } catch (err) {
+              console.error(`Failed to fetch values for dimension ${fd.id}`);
+            }
+          }
+          return {
+            name: fd?.name || `FD_${i + 1}`,
+            key: `FD_${i + 1}`,
+            in_use: fd?.in_use || false,
+            values,
+          };
+        })
+      );
+      setDimensions(fullList);
+
+      const combos = await fetchAccountCombinations();
+      const grouped = combos.reduce((acc, curr) => {
+        acc[curr.account] = acc[curr.account] || [];
+        acc[curr.account].push(curr.dimensions);
+        return acc;
+      }, {} as Record<string, any[]>);
+      setStructures(grouped);
+    };
+
+    loadData();
+  }, []);
+
+  const toggleExpand = (acct: string) => {
     const copy = new Set(expandedAccounts);
     copy.has(acct) ? copy.delete(acct) : copy.add(acct);
     setExpandedAccounts(copy);
   };
 
-  const handleAddCombination = () => {
+  const handleAddCombination = async () => {
     if (!selectedAccount) return;
+
+    const newCombo = { ...newCombination };
+
+    // Save to backend
+    try {
+      await saveAccountCombinations([
+        {
+          account: selectedAccount,
+          dimensions: newCombo,
+        } as AccountCombinationRequest,
+      ]);
+    } catch (error) {
+      console.error("Failed to save combination:", error);
+      return;
+    }
+
+    // Update local state
     setStructures((prev) => {
       const list = prev[selectedAccount] || [];
-      return { ...prev, [selectedAccount]: [...list, newCombination] };
+      return { ...prev, [selectedAccount]: [...list, newCombo] };
     });
     setNewCombination({});
   };
 
-  const getCommaValues = (account, dimension) => {
+  const getCommaValues = (account: string, dimension: string) => {
     const combos = structures[account] || [];
-    const values = combos.map((c) => c[dimension] || "Any");
+    const dim = dimensions.find((d) => d.key === dimension);
+    const values = combos.map((c) => {
+      const val = c[dimension];
+      if (!dim?.in_use) return "N/A";
+      return val === undefined || val === "" ? "Any" : val;
+    });
     return [...new Set(values)].join(", ");
   };
 
@@ -76,9 +120,9 @@ export default function AccountStructuresPage() {
                   {acct.account} - {acct.description}
                 </div>
                 <div className="flex items-center gap-6 text-xs">
-                  {mockDimensions.map((dim) => (
-                    <span key={dim.name}>
-                      <strong>{dim.name}:</strong> {getCommaValues(acct.account, dim.name)}
+                  {dimensions.map((dim) => (
+                    <span key={dim.key}>
+                      <strong>{dim.name}:</strong> {getCommaValues(acct.account, dim.key)}
                     </span>
                   ))}
                   {expandedAccounts.has(acct.account) ? <ChevronDown /> : <ChevronRight />}
@@ -89,8 +133,8 @@ export default function AccountStructuresPage() {
                   <table className="min-w-full border text-left text-sm">
                     <thead className="bg-gray-200 dark:bg-gray-800">
                       <tr>
-                        {mockDimensions.map((dim) => (
-                          <th key={dim.name} className="px-3 py-2 border">
+                        {dimensions.map((dim) => (
+                          <th key={dim.key} className="px-3 py-2 border">
                             {dim.name}
                           </th>
                         ))}
@@ -99,9 +143,9 @@ export default function AccountStructuresPage() {
                     <tbody>
                       {(structures[acct.account] || []).map((combo, idx) => (
                         <tr key={idx} className="border-t hover:bg-gray-50">
-                          {mockDimensions.map((dim) => (
-                            <td key={dim.name} className="px-3 py-2 border">
-                              {combo[dim.name] || "Any"}
+                          {dimensions.map((dim) => (
+                            <td key={dim.key} className="px-3 py-2 border">
+                              {dim.in_use ? combo[dim.key] || "Any" : "N/A"}
                             </td>
                           ))}
                         </tr>
@@ -134,27 +178,32 @@ export default function AccountStructuresPage() {
             </select>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-6">
-            {mockDimensions.map((dim) => (
-              <div key={dim.name}>
-                <label className="block text-sm font-medium mb-1">
-                  {dim.name}
-                </label>
+            {dimensions.map((dim) => (
+              <div key={dim.key}>
+                <label className="block text-sm font-medium mb-1">{dim.name}</label>
                 <select
-                  value={newCombination[dim.name] || ""}
+                  disabled={!dim.in_use}
+                  value={newCombination[dim.key] || ""}
                   onChange={(e) =>
                     setNewCombination((prev) => ({
                       ...prev,
-                      [dim.name]: e.target.value,
+                      [dim.key]: e.target.value,
                     }))
                   }
-                  className="w-full px-3 py-2 border rounded-md"
+                  className="w-full px-3 py-2 border rounded-md bg-white disabled:bg-gray-100 dark:disabled:bg-gray-800"
                 >
-                  <option value="">Any</option>
-                  {dim.values.map((val) => (
-                    <option key={val.code} value={val.code}>
-                      {val.code} - {val.description}
-                    </option>
-                  ))}
+                  {dim.in_use ? (
+                    <>
+                      <option value="">Any</option>
+                      {dim.values.map((val) => (
+                        <option key={val.code} value={val.code}>
+                          {val.code} - {val.description}
+                        </option>
+                      ))}
+                    </>
+                  ) : (
+                    <option value="">Not in use</option>
+                  )}
                 </select>
               </div>
             ))}

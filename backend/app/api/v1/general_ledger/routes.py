@@ -54,3 +54,15 @@ def api_delete_value(dimension_id: int, code: str):
     if not success:
         raise HTTPException(status_code=404, detail="Code not found")
     return {"success": True}
+
+# -----------------------------
+# Account Combinations
+# -----------------------------
+@router.get("/account_combinations", response_model=list[AccountCombination])
+def get_combinations():
+    return get_account_combinations()
+
+@router.post("/account_combinations")
+def save_combinations(data: list[AccountCombinationRequest]):
+    save_account_combinations(data)
+    return {"success": True, "count": len(data)}

@@ -63,3 +63,17 @@ class TrialBalanceEntry(BaseModel):
     debit: float
     credit: float
     balance: float
+
+class SubledgerEntry(BaseModel):
+    id: UUID
+    subledger_type: str  # "AR", "AP", "Inventory", etc.
+    reference: str       # Match GL reference
+    document_date: date
+    document_number: str
+    amount: float
+    currency: str
+    party: str           # Customer, Vendor, etc.
+    description: str
+    posted_to_gl: bool
+    gl_entry_ids: list[UUID]
+    created_at: datetime

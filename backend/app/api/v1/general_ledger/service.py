@@ -9,7 +9,7 @@ from .schemas import (
     GLEntry,
     TrialBalanceEntry
 )
-from datetime import datetime
+from datetime import datetime, date
 from uuid import uuid4
 
 # In-memory store (can be replaced with DB later)
@@ -65,10 +65,8 @@ _account_combinations: dict[str, list[AccountCombination]] = {
     ]
 }
 
-from uuid import uuid4
-from datetime import datetime, date
-
 _gl_entries: list[GLEntry] = [
+    # 2025 Entries
     GLEntry(
         id=uuid4(),
         journal_date=date(2025, 7, 14),
@@ -77,9 +75,7 @@ _gl_entries: list[GLEntry] = [
         debit=10000.00,
         credit=0.00,
         currency="USD",
-        financial_dimensions={
-            "FD_1": "01", "FD_2": "100", "FD_8": "01"
-        },
+        financial_dimensions={"FD_1": "01", "FD_2": "100", "FD_8": "01"},
         reference="AR-001",
         description="Customer payment received",
         source="Accounts Receivable",
@@ -94,16 +90,107 @@ _gl_entries: list[GLEntry] = [
         debit=0.00,
         credit=10000.00,
         currency="USD",
-        financial_dimensions={
-            "FD_1": "01", "FD_2": "100", "FD_8": "01"
-        },
+        financial_dimensions={"FD_1": "01", "FD_2": "100", "FD_8": "01"},
         reference="AR-001",
         description="Revenue from sale",
         source="Accounts Receivable",
         created_at=datetime.utcnow(),
         posted_by="admin"
-    )
+    ),
+    GLEntry(
+        id=uuid4(),
+        journal_date=date(2025, 7, 15),
+        account_number="5000",
+        account_name="Cost of Goods Sold",
+        debit=4000.00,
+        credit=0.00,
+        currency="USD",
+        financial_dimensions={"FD_1": "02", "FD_2": "200", "FD_8": "02"},
+        reference="COGS-2025-01",
+        description="Cost of sold inventory",
+        source="Inventory",
+        created_at=datetime.utcnow(),
+        posted_by="admin"
+    ),
+    GLEntry(
+        id=uuid4(),
+        journal_date=date(2025, 1, 15),
+        account_number="1000",
+        account_name="Cash",
+        debit=0.00,
+        credit=4000.00,
+        currency="USD",
+        financial_dimensions={"FD_1": "02", "FD_2": "200", "FD_8": "02"},
+        reference="COGS-2025-01",
+        description="Inventory purchase payment",
+        source="Inventory",
+        created_at=datetime.utcnow(),
+        posted_by="admin"
+    ),
+
+    # 2024 Entries
+    GLEntry(
+        id=uuid4(),
+        journal_date=date(2024, 12, 30),
+        account_number="1000",
+        account_name="Cash",
+        debit=8000.00,
+        credit=0.00,
+        currency="USD",
+        financial_dimensions={"FD_1": "01", "FD_2": "100", "FD_8": "01"},
+        reference="AR-2024-001",
+        description="End-of-year payment",
+        source="Accounts Receivable",
+        created_at=datetime.utcnow(),
+        posted_by="admin"
+    ),
+    GLEntry(
+        id=uuid4(),
+        journal_date=date(2024, 12, 30),
+        account_number="4000",
+        account_name="Sales Revenue",
+        debit=0.00,
+        credit=8000.00,
+        currency="USD",
+        financial_dimensions={"FD_1": "01", "FD_2": "100", "FD_8": "01"},
+        reference="AR-2024-001",
+        description="End-of-year revenue",
+        source="Accounts Receivable",
+        created_at=datetime.utcnow(),
+        posted_by="admin"
+    ),
+    GLEntry(
+        id=uuid4(),
+        journal_date=date(2024, 11, 15),
+        account_number="2000",
+        account_name="Accounts Payable",
+        debit=0.00,
+        credit=5000.00,
+        currency="USD",
+        financial_dimensions={"FD_1": "02", "FD_2": "200", "FD_8": "02"},
+        reference="AP-2024-015",
+        description="Vendor invoice",
+        source="Accounts Payable",
+        created_at=datetime.utcnow(),
+        posted_by="admin"
+    ),
+    GLEntry(
+        id=uuid4(),
+        journal_date=date(2024, 11, 15),
+        account_number="5000",
+        account_name="Cost of Goods Sold",
+        debit=5000.00,
+        credit=0.00,
+        currency="USD",
+        financial_dimensions={"FD_1": "02", "FD_2": "200", "FD_8": "02"},
+        reference="AP-2024-015",
+        description="Inventory expense",
+        source="Accounts Payable",
+        created_at=datetime.utcnow(),
+        posted_by="admin"
+    ),
 ]
+
 
 
 # -----------------------------
@@ -176,10 +263,22 @@ def save_account_combinations(combos: list[AccountCombinationRequest]) -> None:
 # -----------------------------
 # Trial Balance
 # -----------------------------
-def get_trial_balance() -> list[TrialBalanceEntry]:
+def get_trial_balance(
+    from_date: date | None = None,
+    to_date: date | None = None
+) -> list[TrialBalanceEntry]:
+    today = date.today()
+    current_year_start = date(today.year, 1, 1)
+
+    from_date = from_date or current_year_start
+    to_date = to_date or today
+
     balances: dict[str, TrialBalanceEntry] = {}
 
     for entry in _gl_entries:
+        if not (from_date <= entry.journal_date <= to_date):
+            continue
+
         acct = entry.account_number
         name = entry.account_name
         debit = entry.debit
@@ -199,4 +298,5 @@ def get_trial_balance() -> list[TrialBalanceEntry]:
         balances[acct].balance += (debit - credit)
 
     return list(balances.values())
+
 

@@ -25,7 +25,7 @@ export default function GeneralLedgerPage() {
           <div className="flex flex-wrap gap-4">
             <SecureButton
               permission={Permissions.MOD_GL}
-              onClick={() => console.log("Go to Trial Balance")}
+              onClick={() => router.push("/general_ledger/trial_balance")}
               className="px-6 py-3 rounded-md bg-blue-600 hover:bg-blue-700 text-white transition"
             >
               Trial Balance

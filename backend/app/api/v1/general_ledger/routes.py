@@ -1,12 +1,17 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
+from typing import Optional
+from datetime import date
 from .service import *
 from .schemas import *
 
 router = APIRouter()
 
 @router.get("/trial_balance", response_model=list[TrialBalanceEntry])
-def trial_balance():
-    return get_trial_balance()
+def trial_balance_route(
+    from_date: Optional[date] = Query(None),
+    to_date: Optional[date] = Query(None),
+):
+    return get_trial_balance(from_date, to_date)
 
 @router.get("/main_accounts")
 def main_accounts() -> list[MainAccount]:

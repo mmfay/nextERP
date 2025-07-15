@@ -4,8 +4,8 @@ from .schemas import *
 
 router = APIRouter()
 
-@router.get("/trial_balance")
-def trial_balance() -> list[Account]:
+@router.get("/trial_balance", response_model=list[TrialBalanceEntry])
+def trial_balance():
     return get_trial_balance()
 
 @router.get("/main_accounts")

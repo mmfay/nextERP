@@ -1,6 +1,7 @@
 from pydantic import BaseModel, constr
 from typing import Literal, Dict, List, Optional
-
+from datetime import date, datetime
+from uuid import UUID
 
 class Account(BaseModel):
     account: int
@@ -40,3 +41,25 @@ class AccountCombination(BaseModel):
 class AccountCombinationRequest(BaseModel):
     account: str
     dimensions: Dict[str, Optional[str]]
+
+class GLEntry(BaseModel):
+    id: UUID
+    journal_date: date
+    account_number: str
+    account_name: str
+    debit: float
+    credit: float
+    currency: str = "USD"
+    financial_dimensions: Dict[str, Optional[str]]  # e.g. {"FD_1": "01", ...}
+    reference: Optional[str]
+    description: Optional[str]
+    source: Optional[str]
+    created_at: datetime
+    posted_by: str
+
+class TrialBalanceEntry(BaseModel):
+    account: str
+    name: str
+    debit: float
+    credit: float
+    balance: float

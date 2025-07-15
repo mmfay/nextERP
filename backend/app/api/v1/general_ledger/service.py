@@ -6,7 +6,11 @@ from .schemas import (
     DimensionValue,
     AccountCombination,
     AccountCombinationRequest,
+    GLEntry,
+    TrialBalanceEntry
 )
+from datetime import datetime
+from uuid import uuid4
 
 # In-memory store (can be replaced with DB later)
 _main_accounts: list[MainAccount] = [
@@ -61,11 +65,46 @@ _account_combinations: dict[str, list[AccountCombination]] = {
     ]
 }
 
-def get_trial_balance():
-    return [
-        {"account": 1001, "name": "Cash", "amount" : 10100},
-        {"account": 2001, "name": "Accrued Purchase Orders", "amount" : 20100},
-    ]
+from uuid import uuid4
+from datetime import datetime, date
+
+_gl_entries: list[GLEntry] = [
+    GLEntry(
+        id=uuid4(),
+        journal_date=date(2025, 7, 14),
+        account_number="1000",
+        account_name="Cash",
+        debit=10000.00,
+        credit=0.00,
+        currency="USD",
+        financial_dimensions={
+            "FD_1": "01", "FD_2": "100", "FD_8": "01"
+        },
+        reference="AR-001",
+        description="Customer payment received",
+        source="Accounts Receivable",
+        created_at=datetime.utcnow(),
+        posted_by="admin"
+    ),
+    GLEntry(
+        id=uuid4(),
+        journal_date=date(2025, 7, 14),
+        account_number="4000",
+        account_name="Sales Revenue",
+        debit=0.00,
+        credit=10000.00,
+        currency="USD",
+        financial_dimensions={
+            "FD_1": "01", "FD_2": "100", "FD_8": "01"
+        },
+        reference="AR-001",
+        description="Revenue from sale",
+        source="Accounts Receivable",
+        created_at=datetime.utcnow(),
+        posted_by="admin"
+    )
+]
+
 
 # -----------------------------
 # Main Accounts
@@ -133,3 +172,31 @@ def save_account_combinations(combos: list[AccountCombinationRequest]) -> None:
         _account_combinations.setdefault(acct, []).append(
             AccountCombination(account=acct, dimensions=combo.dimensions)
         )
+
+# -----------------------------
+# Trial Balance
+# -----------------------------
+def get_trial_balance() -> list[TrialBalanceEntry]:
+    balances: dict[str, TrialBalanceEntry] = {}
+
+    for entry in _gl_entries:
+        acct = entry.account_number
+        name = entry.account_name
+        debit = entry.debit
+        credit = entry.credit
+
+        if acct not in balances:
+            balances[acct] = TrialBalanceEntry(
+                account=acct,
+                name=name,
+                debit=0.0,
+                credit=0.0,
+                balance=0.0
+            )
+
+        balances[acct].debit += debit
+        balances[acct].credit += credit
+        balances[acct].balance += (debit - credit)
+
+    return list(balances.values())
+

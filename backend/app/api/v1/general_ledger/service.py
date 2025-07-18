@@ -7,7 +7,9 @@ from .schemas import (
     AccountCombination,
     AccountCombinationRequest,
     GLEntry,
-    TrialBalanceEntry
+    TrialBalanceEntry,
+    GeneralJournal,
+    JournalLine
 )
 from datetime import datetime, date
 from uuid import uuid4
@@ -17,6 +19,8 @@ from app.data.general_ledger.in_memory_store import (
     _dimension_values,
     _account_combinations,
     _gl_entries,
+    _general_journal_header,
+    _journal_lines
 )
 
 # -----------------------------
@@ -125,4 +129,14 @@ def get_trial_balance(
 
     return list(balances.values())
 
+# -----------------------------
+# General Journals
+# -----------------------------
+def get_general_journals() -> list[GeneralJournal]:
+    return _general_journal_header
 
+# -----------------------------
+# General Journals Lines
+# -----------------------------
+def get_general_journal_lines(journal_id: str) -> list[JournalLine]:
+    return _journal_lines.get(journal_id, [])

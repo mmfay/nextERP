@@ -71,3 +71,20 @@ def get_combinations():
 def save_combinations(data: list[AccountCombinationRequest]):
     save_account_combinations(data)
     return {"success": True, "count": len(data)}
+
+# -----------------------------
+# General Journals
+# -----------------------------
+@router.get("/general_journals", response_model=list[GeneralJournal])
+def general_journals():
+    return get_general_journals()
+
+# -----------------------------
+# General Journal Line
+# -----------------------------
+@router.get("/general_journals/{journal_id}/lines", response_model=list[JournalLine])
+def general_journal_lines(journal_id: str):
+    lines = get_general_journal_lines(journal_id)
+    if lines is None:
+        raise HTTPException(status_code=404, detail="Journal not found or has no lines")
+    return lines

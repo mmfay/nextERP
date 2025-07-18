@@ -8,7 +8,9 @@ from app.api.v1.general_ledger.schemas import (
     AccountCombinationRequest,
     GLEntry,
     TrialBalanceEntry,
-    SubledgerEntry
+    SubledgerEntry,
+    GeneralJournal,
+    JournalLine
 )
 from datetime import datetime, date
 from uuid import uuid4
@@ -258,3 +260,113 @@ _subledger_entries: list[SubledgerEntry] = [
         created_at=datetime.utcnow()
     )
 ]
+
+_general_journal_header: list[GeneralJournal] = [
+    GeneralJournal(
+        journalID="GJ-000001",
+        document_date=date(2025, 1, 1),
+        type="Opening",
+        description="Opening balances for new fiscal year",
+        status="posted",
+
+    ),
+    GeneralJournal(
+        journalID="GJ-000002",
+        document_date=date(2025, 1, 15),
+        type="Accrual",
+        description="Accrual for utilities",
+        status="posted",
+
+    ),
+    GeneralJournal(
+        journalID="GJ-000003",
+        document_date=date(2025, 2, 1),
+        type="Payroll",
+        description="January payroll expenses",
+        status="draft",
+
+    ),
+    GeneralJournal(
+        journalID="GJ-000004",
+        document_date=date(2025, 2, 10),
+        type="Adjustment",
+        description="Reclassify office supply expenses",
+        status="posted",
+
+    )
+]
+
+_journal_lines: dict[str, list[JournalLine]] = {
+    "GJ-000001": [
+        JournalLine(
+            lineID="JL-000001-01",
+            journalID="GJ-000001",
+            account="1000",
+            description="Opening cash balance",
+            debit=50000.00,
+            credit=0.00
+        ),
+        JournalLine(
+            lineID="JL-000001-02",
+            journalID="GJ-000001",
+            account="3000",
+            description="Opening retained earnings",
+            debit=0.00,
+            credit=50000.00
+        ),
+    ],
+    "GJ-000002": [
+        JournalLine(
+            lineID="JL-000002-01",
+            journalID="GJ-000002",
+            account="5000",
+            description="Utilities expense",
+            debit=3000.00,
+            credit=0.00
+        ),
+        JournalLine(
+            lineID="JL-000002-02",
+            journalID="GJ-000002",
+            account="2000",
+            description="Accrued utilities payable",
+            debit=0.00,
+            credit=3000.00
+        ),
+    ],
+    "GJ-000003": [
+        JournalLine(
+            lineID="JL-000003-01",
+            journalID="GJ-000003",
+            account="5000",
+            description="Payroll expense",
+            debit=10000.00,
+            credit=0.00
+        ),
+        JournalLine(
+            lineID="JL-000003-02",
+            journalID="GJ-000003",
+            account="1000",
+            description="Payroll disbursement",
+            debit=0.00,
+            credit=10000.00
+        ),
+    ],
+    "GJ-000004": [
+        JournalLine(
+            lineID="JL-000004-01",
+            journalID="GJ-000004",
+            account="5000",
+            description="Reclassify supply expense",
+            debit=1200.00,
+            credit=0.00
+        ),
+        JournalLine(
+            lineID="JL-000004-02",
+            journalID="GJ-000004",
+            account="1000",
+            description="Adjust cash for reclass",
+            debit=0.00,
+            credit=1200.00
+        ),
+    ],
+}

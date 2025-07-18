@@ -77,3 +77,21 @@ class SubledgerEntry(BaseModel):
     posted_to_gl: bool
     gl_entry_ids: list[UUID]
     created_at: datetime
+
+class GeneralJournal(BaseModel):
+    journalID: str
+    document_date: date
+    type: str
+    description: str
+    status: str
+
+class JournalLine(BaseModel):
+    lineID: str
+    journalID: str
+    account: str
+    description: Optional[str] = None
+    debit: float
+    credit: float
+
+
+

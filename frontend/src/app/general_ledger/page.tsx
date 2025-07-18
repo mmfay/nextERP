@@ -60,7 +60,7 @@ export default function GeneralLedgerPage() {
           <div className="flex flex-wrap gap-4">
             <SecureButton
               permission={Permissions.MOD_GL}
-              onClick={() => console.log("Create General Journal")}
+              onClick={() => router.push("/general_ledger/general_journal")}
               className="px-6 py-3 rounded-md bg-green-600 hover:bg-green-700 text-white transition"
             >
               General Journal

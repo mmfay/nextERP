@@ -27,3 +27,18 @@ export async function fetchGeneralJournals(): Promise<GeneralJournal[]> {
     status: j.status,
   }));
 }
+
+
+export async function fetchJournalHeader(journalId: string) {
+  const res = await fetch(`http://localhost:8000/api/v1/general_ledger/general_journals/${journalId}`, {
+    credentials: "include",
+  });
+
+  if (!res.ok) {
+    const message = await res.text();
+    throw new Error(`Failed to fetch journal header: ${res.status} - ${message}`);
+  }
+
+  return res.json(); // should return something like { status: "draft" }
+}
+

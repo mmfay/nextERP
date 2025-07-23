@@ -299,7 +299,7 @@ _general_journal_header: list[GeneralJournal] = [
 _journal_lines: dict[str, list[JournalLine]] = {
     "GJ-000001": [
         JournalLine(
-            lineID="JL-000001-01",
+            lineID="1",
             journalID="GJ-000001",
             account="1000",
             description="Opening cash balance",
@@ -307,7 +307,7 @@ _journal_lines: dict[str, list[JournalLine]] = {
             credit=0.00
         ),
         JournalLine(
-            lineID="JL-000001-02",
+            lineID="2",
             journalID="GJ-000001",
             account="3000",
             description="Opening retained earnings",
@@ -317,7 +317,7 @@ _journal_lines: dict[str, list[JournalLine]] = {
     ],
     "GJ-000002": [
         JournalLine(
-            lineID="JL-000002-01",
+            lineID="1",
             journalID="GJ-000002",
             account="5000",
             description="Utilities expense",
@@ -325,7 +325,7 @@ _journal_lines: dict[str, list[JournalLine]] = {
             credit=0.00
         ),
         JournalLine(
-            lineID="JL-000002-02",
+            lineID="2",
             journalID="GJ-000002",
             account="2000",
             description="Accrued utilities payable",
@@ -335,7 +335,7 @@ _journal_lines: dict[str, list[JournalLine]] = {
     ],
     "GJ-000003": [
         JournalLine(
-            lineID="JL-000003-01",
+            lineID="1",
             journalID="GJ-000003",
             account="5000",
             description="Payroll expense",
@@ -343,7 +343,7 @@ _journal_lines: dict[str, list[JournalLine]] = {
             credit=0.00
         ),
         JournalLine(
-            lineID="JL-000003-02",
+            lineID="2",
             journalID="GJ-000003",
             account="1000",
             description="Payroll disbursement",
@@ -353,7 +353,7 @@ _journal_lines: dict[str, list[JournalLine]] = {
     ],
     "GJ-000004": [
         JournalLine(
-            lineID="JL-000004-01",
+            lineID="1",
             journalID="GJ-000004",
             account="5000",
             description="Reclassify supply expense",
@@ -361,7 +361,7 @@ _journal_lines: dict[str, list[JournalLine]] = {
             credit=0.00
         ),
         JournalLine(
-            lineID="JL-000004-02",
+            lineID="2",
             journalID="GJ-000004",
             account="1000",
             description="Adjust cash for reclass",

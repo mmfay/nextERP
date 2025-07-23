@@ -13,6 +13,7 @@ from .schemas import (
 )
 from datetime import datetime, date
 from uuid import uuid4
+from typing import Optional
 from app.data.general_ledger.in_memory_store import (
     _main_accounts,
     _financial_dimensions,
@@ -134,6 +135,13 @@ def get_trial_balance(
 # -----------------------------
 def get_general_journals() -> list[GeneralJournal]:
     return _general_journal_header
+
+# service.py
+def get_general_journal_by_id(journal_id: str) -> Optional[GeneralJournal]:
+    for journal in _general_journal_header:
+        if journal.journalID == journal_id:
+            return journal
+    return None
 
 # -----------------------------
 # General Journals Lines

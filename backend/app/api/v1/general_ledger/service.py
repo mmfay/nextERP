@@ -13,7 +13,7 @@ from .schemas import (
 )
 from datetime import datetime, date
 from uuid import uuid4
-from typing import Optional
+from typing import List, Optional, Dict
 from app.data.general_ledger.in_memory_store import (
     _main_accounts,
     _financial_dimensions,
@@ -148,3 +148,56 @@ def get_general_journal_by_id(journal_id: str) -> Optional[GeneralJournal]:
 # -----------------------------
 def get_general_journal_lines(journal_id: str) -> list[JournalLine]:
     return _journal_lines.get(journal_id, [])
+
+def upsert_journal_lines(journal_id: str, incoming: List[JournalLine]) -> List[JournalLine]:
+    """
+    Replace the stored lines for `journal_id` with the diff of `incoming`:
+     - update any matching lineID
+     - insert any with no lineID (assign next integer)
+     - delete any existing lines not present in incoming
+    """
+    # 1) grab existing lines
+    existing = _journal_lines.get(journal_id, [])
+
+    # 2) index existing by ID, but parse them as ints for ordering
+    by_id: Dict[str, JournalLine] = {l.lineID: l for l in existing if l.lineID}
+    existing_ids = [int(l.lineID) for l in existing if l.lineID.isdigit()]
+    next_id = max(existing_ids, default=0) + 1
+
+    # 3) build the new set
+    updated_by_id: Dict[str, JournalLine] = {}
+    for line in incoming:
+        if line.lineID and line.lineID in by_id:
+            # update in place
+            stored = by_id[line.lineID]
+            stored.account     = line.account
+            stored.description = line.description
+            stored.debit       = line.debit
+            stored.credit      = line.credit
+            updated_by_id[line.lineID] = stored
+        else:
+            # new line → assign next integer ID
+            new_id = str(next_id)
+            next_id += 1
+            new_line = JournalLine(
+                lineID=new_id,
+                journalID=journal_id,
+                account=line.account,
+                description=line.description,
+                debit=line.debit,
+                credit=line.credit,
+            )
+            updated_by_id[new_id] = new_line
+    # 4) replace the in‐memory store
+    _journal_lines[journal_id] = list(updated_by_id.values())
+    return _journal_lines[journal_id]
+
+
+def delete_journal_line(journal_id: str, line_id: str) -> bool:
+    
+    lines = _journal_lines.get(journal_id, [])
+    filtered = [l for l in lines if l.lineID != line_id]
+    if len(filtered) < len(lines):
+        _journal_lines[journal_id] = filtered
+        return True
+    return False

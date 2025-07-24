@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, status
 from typing import Optional
 from datetime import date
 from .service import *
@@ -94,3 +94,15 @@ def general_journal_lines(journal_id: str):
     if lines is None:
         raise HTTPException(status_code=404, detail="Journal not found or has no lines")
     return lines
+
+@router.put("/general_journals/{journal_id}/lines", response_model=List[JournalLine])
+def update_lines(journal_id: str, lines: List[JournalLine]):
+    # You may wish to validate journal existence first
+    return upsert_journal_lines(journal_id, lines)
+
+@router.delete("/general_journals/{journal_id}/lines/{line_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_line(journal_id: str, line_id: str):
+    deleted = delete_journal_line(journal_id, line_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Line not found")
+    return

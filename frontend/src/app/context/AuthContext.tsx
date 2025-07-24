@@ -1,6 +1,8 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+
 
 interface User {
   id: string;
@@ -21,9 +23,12 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  
   const [user, setUser] = useState<User | null>(null);
   const [permissions, setPermissions] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
+
 
   const refreshUser = async () => {
     setIsLoading(true);
@@ -66,6 +71,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     refreshUser();
   }, []);
+
+  useEffect(() => {
+    if (!isLoading && !user) {
+      router.push("/login"); // Or wherever your login page is
+    }
+  }, [isLoading, user, router]);
+
 
   return (
     <AuthContext.Provider

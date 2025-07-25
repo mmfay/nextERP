@@ -14,6 +14,7 @@ from .schemas import (
 from datetime import datetime, date
 from uuid import uuid4
 from typing import List, Optional, Dict
+from fastapi import HTTPException
 from app.data.general_ledger.in_memory_store import (
     _main_accounts,
     _financial_dimensions,
@@ -136,12 +137,35 @@ def get_trial_balance(
 def get_general_journals() -> list[GeneralJournal]:
     return _general_journal_header
 
-# service.py
 def get_general_journal_by_id(journal_id: str) -> Optional[GeneralJournal]:
     for journal in _general_journal_header:
         if journal.journalID == journal_id:
             return journal
     return None
+
+def validate_post_journal(journal_id: str) -> GeneralJournal:
+    # get journal lines
+    lines = _journal_lines.get(journal_id)
+
+    # 2) sum debits & credits
+    total_debits = sum(line.debit for line in lines)
+    total_credits = sum(line.credit for line in lines)
+
+    # 3) reject if unbalanced
+    if total_debits != total_credits:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Cannot post unbalanced journal {journal_id}: "
+                f"debits={total_debits} ≠ credits={total_credits}"
+            )
+        )
+
+    journal = get_general_journal_by_id(journal_id)
+    journal.status = "posted"
+    # 4) all good → construct & return your posted journal
+    #    (you could also flip a status flag in a header store if you have one)
+    return journal
 
 # -----------------------------
 # General Journals Lines

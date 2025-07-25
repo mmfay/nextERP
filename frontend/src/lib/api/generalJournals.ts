@@ -42,3 +42,29 @@ export async function fetchJournalHeader(journalId: string) {
   return res.json(); // should return something like { status: "draft" }
 }
 
+export async function postGeneralJournal(
+  journalId: GeneralJournal
+): Promise<GeneralJournal> {
+  const res = await fetch(`http://localhost:8000/api/v1/general_ledger/general_journals/${journalId}`,
+    {
+      method: "PATCH",
+      credentials: "include",
+    }
+  );
+
+  if (!res.ok) {
+    const message = await res.text();
+    throw new Error(
+      `Failed to post journal ${journalId}: ${res.status} - ${message}`
+    );
+  }
+
+  const updated = await res.json();
+  return {
+    journalID: updated.journalID,
+    document_date: updated.document_date,
+    type: updated.type,
+    description: updated.description,
+    status: updated.status,
+  };
+}

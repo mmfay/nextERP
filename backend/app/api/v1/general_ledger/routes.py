@@ -85,6 +85,16 @@ def get_general_journal(journal_id: str):
     if journal is None:
         raise HTTPException(status_code=404, detail="Journal not found")
     return journal
+
+@router.patch("/general_journals/{journal_id}", response_model=GeneralJournal)
+def post_journal(journal_id: str):
+    journal = get_general_journal_by_id(journal_id)
+    if journal is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Journal {journal_id} not found"
+        )
+    return validate_post_journal(journal_id)
 # -----------------------------
 # General Journal Line
 # -----------------------------

@@ -85,6 +85,11 @@ class GeneralJournal(BaseModel):
     description: str
     status: str
 
+class CreateGeneralJournal(BaseModel):
+    document_date: date
+    type: str
+    description: str
+
 class JournalLine(BaseModel):
     lineID: str
     journalID: str

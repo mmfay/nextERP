@@ -75,6 +75,17 @@ def save_combinations(data: list[AccountCombinationRequest]):
 # -----------------------------
 # General Journals
 # -----------------------------
+@router.post(
+    "/general_journals",
+    response_model=GeneralJournal,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a new general journal",
+)
+def create_journal(payload: CreateGeneralJournal):
+    """
+    Create a new GeneralJournal with a generated ID and initial status 'draft'.
+    """
+    return create_general_journal(payload)
 @router.get("/general_journals", response_model=list[GeneralJournal])
 def general_journals():
     return get_general_journals()

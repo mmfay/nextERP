@@ -9,12 +9,13 @@ from .schemas import (
     GLEntry,
     TrialBalanceEntry,
     GeneralJournal,
-    JournalLine
+    JournalLine,
+    CreateGeneralJournal
 )
 from datetime import datetime, date
 from uuid import uuid4
 from typing import List, Optional, Dict
-from fastapi import HTTPException
+from fastapi import HTTPException, status
 from app.data.general_ledger.in_memory_store import (
     _main_accounts,
     _financial_dimensions,
@@ -24,7 +25,7 @@ from app.data.general_ledger.in_memory_store import (
     _general_journal_header,
     _journal_lines
 )
-
+from app.services.sequences import get_next_id
 # -----------------------------
 # Main Accounts
 # -----------------------------
@@ -225,3 +226,30 @@ def delete_journal_line(journal_id: str, line_id: str) -> bool:
         _journal_lines[journal_id] = filtered
         return True
     return False
+
+def create_general_journal(data: CreateGeneralJournal) -> GeneralJournal:
+    """
+    Create a new GeneralJournal, assign it a generated ID and initial status 'draft',
+    append it to the in-memory header list, and return it.
+    """
+    # 1) generate a new sequential ID, e.g. "GJ-000001"
+    new_id = get_sequence_gen_jour()
+
+    # 2) build the model
+    journal = GeneralJournal(
+        journalID=new_id,
+        document_date=data.document_date,
+        type=data.type,
+        description=data.description,
+        status="draft",
+    )
+
+    # 3) persist to our in-memory list
+    _general_journal_header.append(journal)
+
+    # 4) return the newly created journal
+    return journal
+
+def get_sequence_gen_jour():
+    return get_next_id("GJ")
+    

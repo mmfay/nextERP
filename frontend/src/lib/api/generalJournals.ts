@@ -1,3 +1,5 @@
+// lib/api/generalJournals.ts
+
 export type GeneralJournal = {
   journalID: string;
   document_date: string;
@@ -6,8 +8,13 @@ export type GeneralJournal = {
   status: string;
 };
 
+const BASE_URL = "http://localhost:8000/api/v1/general_ledger/general_journals";
+
+/**
+ * Fetch all general journals.
+ */
 export async function fetchGeneralJournals(): Promise<GeneralJournal[]> {
-  const res = await fetch("http://localhost:8000/api/v1/general_ledger/general_journals", {
+  const res = await fetch(BASE_URL, {
     credentials: "include",
   });
 
@@ -17,10 +24,8 @@ export async function fetchGeneralJournals(): Promise<GeneralJournal[]> {
   }
 
   const data = await res.json();
-  
-  // Normalize Python-style snake_case keys if needed
   return data.map((j: any) => ({
-    journalID: j.journalID, // already camelCase from backend model, if typed properly
+    journalID: j.journalID,
     document_date: j.document_date,
     type: j.type,
     description: j.description,
@@ -28,9 +33,13 @@ export async function fetchGeneralJournals(): Promise<GeneralJournal[]> {
   }));
 }
 
-
-export async function fetchJournalHeader(journalId: string) {
-  const res = await fetch(`http://localhost:8000/api/v1/general_ledger/general_journals/${journalId}`, {
+/**
+ * Fetch a single journal header by ID.
+ */
+export async function fetchJournalHeader(
+  journalId: string
+): Promise<GeneralJournal> {
+  const res = await fetch(`${BASE_URL}/${journalId}`, {
     credentials: "include",
   });
 
@@ -39,24 +48,30 @@ export async function fetchJournalHeader(journalId: string) {
     throw new Error(`Failed to fetch journal header: ${res.status} - ${message}`);
   }
 
-  return res.json(); // should return something like { status: "draft" }
+  const j = await res.json();
+  return {
+    journalID: j.journalID,
+    document_date: j.document_date,
+    type: j.type,
+    description: j.description,
+    status: j.status,
+  };
 }
 
+/**
+ * Post (i.e. set status to "posted") a journal.
+ */
 export async function postGeneralJournal(
-  journalId: GeneralJournal
+  journalId: string
 ): Promise<GeneralJournal> {
-  const res = await fetch(`http://localhost:8000/api/v1/general_ledger/general_journals/${journalId}`,
-    {
-      method: "PATCH",
-      credentials: "include",
-    }
-  );
+  const res = await fetch(`${BASE_URL}/${journalId}`, {
+    method: "PATCH",
+    credentials: "include",
+  });
 
   if (!res.ok) {
     const message = await res.text();
-    throw new Error(
-      `Failed to post journal ${journalId}: ${res.status} - ${message}`
-    );
+    throw new Error(`Failed to post journal ${journalId}: ${res.status} - ${message}`);
   }
 
   const updated = await res.json();
@@ -66,5 +81,39 @@ export async function postGeneralJournal(
     type: updated.type,
     description: updated.description,
     status: updated.status,
+  };
+}
+
+/**
+ * Create a new general journal.
+ */
+export async function createGeneralJournal(input: {
+  document_date: string;
+  type: string;
+  description: string;
+}): Promise<GeneralJournal> {
+  const res = await fetch(BASE_URL, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(input),
+  });
+
+  if (!res.ok) {
+    const message = await res.text();
+    throw new Error(
+      `Failed to create journal: ${res.status} - ${message}`
+    );
+  }
+
+  const created = await res.json();
+  return {
+    journalID: created.journalID,
+    document_date: created.document_date,
+    type: created.type,
+    description: created.description,
+    status: created.status,
   };
 }

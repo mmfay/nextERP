@@ -51,7 +51,10 @@ export default function Nav() {
                 {can(Permissions.MOD_GL) && (
                   <a href="/general_ledger" className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">General Ledger</a>
                 )}
-                {can(Permissions.MOD_PURCHASING) && (
+                {can(Permissions.MOD_INVENT) && (
+                  <a href="/inventory" className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">Inventory</a>
+                )}
+                {can(Permissions.MOD_PURCH) && (
                   <a href="/purchasing" className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">Purchasing</a>
                 )}
                 {can(Permissions.MOD_SALES) && (

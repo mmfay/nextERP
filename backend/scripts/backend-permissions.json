@@ -6,6 +6,7 @@
     "delete_user",
     "export_reports",
     "mod_gl",
+    "mod_invent",
     "mod_purch",
     "mod_sales",
     "setup_gl"

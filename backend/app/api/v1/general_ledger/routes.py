@@ -135,3 +135,7 @@ def delete_line(journal_id: str, line_id: str):
 @router.get("/posting_setup", response_model=list[PostingSetup])
 def posting_setup():
     return get_posting_setup()
+
+@router.patch("/posting_setup", response_model=List[PostingSetup])
+def update(setups: List[PostingSetup]):
+    return update_posting_setup(setups)

@@ -1,17 +1,4 @@
-from .schemas import (
-    MainAccount, 
-    CreateMainAccount, 
-    FinancialDimension, 
-    UpdateFinancialDimension, 
-    DimensionValue,
-    AccountCombination,
-    AccountCombinationRequest,
-    GLEntry,
-    TrialBalanceEntry,
-    GeneralJournal,
-    JournalLine,
-    CreateGeneralJournal
-)
+from .schemas import *
 from datetime import datetime, date
 from uuid import uuid4
 from typing import List, Optional, Dict
@@ -252,6 +239,17 @@ def create_general_journal(data: CreateGeneralJournal) -> GeneralJournal:
     return journal
 
 def get_posting_setup():
+    return _posting_setup
+
+def update_posting_setup(updates: List[PostingSetup]) -> List[PostingSetup]:
+    # Convert updates to a dictionary for faster lookup
+    updates_by_type = {u.type: u for u in updates}
+
+    # Loop through and replace only matched types
+    for idx, existing in enumerate(_posting_setup):
+        if existing.type in updates_by_type:
+            _posting_setup[idx] = updates_by_type[existing.type]
+
     return _posting_setup
 
 def get_sequence_gen_jour():

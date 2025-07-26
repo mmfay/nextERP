@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { fetchPostingSetup } from "@/lib/api/postingSetup";
+import { fetchPostingSetup, updatePostingSetup } from "@/lib/api/postingSetup";
 import { fetchMainAccounts } from "@/lib/api/mainAccounts";
 
 const moduleTabs: Record<number, string> = {
@@ -16,6 +16,7 @@ export default function PostingPage() {
   const [accountMappings, setAccountMappings] = useState<Record<string, string>>({});
   const [originalMappings, setOriginalMappings] = useState<Record<string, string>>({});
   const [mainAccounts, setMainAccounts] = useState([]);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -78,6 +79,21 @@ export default function PostingPage() {
     (key) => accountMappings[key] !== originalMappings[key]
   );
 
+  const handleSave = async () => {
+    const changed = getChangedRecords();
+    if (!changed.length) return;
+    setSaving(true);
+    try {
+      await updatePostingSetup(changed);
+      setOriginalMappings({ ...accountMappings });
+    } catch (err) {
+      console.error("Failed to update posting setup:", err);
+      alert("Error saving changes");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="min-h-screen pt-24 px-4 sm:px-16 w-full flex flex-col items-center">
       <div className="w-full max-w-4xl">
@@ -137,13 +153,15 @@ export default function PostingPage() {
         </div>
 
         <button
-          disabled={!hasChanges}
+          disabled={!hasChanges || saving}
           className={`mt-6 px-6 py-2 rounded font-medium text-white ${
-            hasChanges ? "bg-green-600 hover:bg-green-700" : "bg-gray-400 cursor-not-allowed"
+            hasChanges && !saving
+              ? "bg-green-600 hover:bg-green-700"
+              : "bg-gray-400 cursor-not-allowed"
           }`}
-          onClick={() => console.log("Changed Records:", getChangedRecords())}
+          onClick={handleSave}
         >
-          Save Changes
+          {saving ? "Saving..." : "Save Changes"}
         </button>
       </div>
     </div>

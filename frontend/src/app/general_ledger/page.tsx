@@ -30,6 +30,7 @@ export default function GeneralLedgerPage() {
             >
               Trial Balance
             </SecureButton>
+            {/*
             <SecureButton
               permission={Permissions.MOD_GL}
               onClick={() => console.log("Go to Balance Sheet")}
@@ -51,6 +52,7 @@ export default function GeneralLedgerPage() {
             >
               Journal Entries
             </SecureButton>
+            */}
           </div>
         </section>
 
@@ -65,6 +67,7 @@ export default function GeneralLedgerPage() {
             >
               General Journal
             </SecureButton>
+            {/*
             <SecureButton
               permission={Permissions.MOD_GL}
               onClick={() => console.log("Create Intercompany Journal")}
@@ -93,6 +96,7 @@ export default function GeneralLedgerPage() {
             >
               Reversing Entry
             </SecureButton>
+            */}
           </div>
         </section>
 
@@ -100,6 +104,7 @@ export default function GeneralLedgerPage() {
         <section>
           <h2 className="text-2xl font-semibold mb-4">Setup</h2>
           <div className="flex flex-wrap gap-4">
+            {/*
             <SecureButton
               permission={Permissions.SETUP_GL}
               onClick={() => console.log("Configure Workflows")}
@@ -107,6 +112,7 @@ export default function GeneralLedgerPage() {
             >
               Workflows
             </SecureButton>
+             */}
             <SecureButton
               permission={Permissions.SETUP_GL}
               onClick={() => router.push("/general_ledger/configure_account_structures")}

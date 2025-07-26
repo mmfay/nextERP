@@ -23,7 +23,8 @@ from app.data.general_ledger.in_memory_store import (
     _account_combinations,
     _gl_entries,
     _general_journal_header,
-    _journal_lines
+    _journal_lines,
+    _posting_setup
 )
 from app.services.sequences import get_next_id
 # -----------------------------
@@ -249,6 +250,9 @@ def create_general_journal(data: CreateGeneralJournal) -> GeneralJournal:
 
     # 4) return the newly created journal
     return journal
+
+def get_posting_setup():
+    return _posting_setup
 
 def get_sequence_gen_jour():
     return get_next_id("GJ")

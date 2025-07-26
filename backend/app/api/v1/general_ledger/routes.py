@@ -106,6 +106,7 @@ def post_journal(journal_id: str):
             detail=f"Journal {journal_id} not found"
         )
     return validate_post_journal(journal_id)
+
 # -----------------------------
 # General Journal Line
 # -----------------------------
@@ -127,3 +128,10 @@ def delete_line(journal_id: str, line_id: str):
     if not deleted:
         raise HTTPException(status_code=404, detail="Line not found")
     return
+
+# -----------------------------
+# General Ledger Posting Setup
+# -----------------------------
+@router.get("/posting_setup", response_model=list[PostingSetup])
+def posting_setup():
+    return get_posting_setup()

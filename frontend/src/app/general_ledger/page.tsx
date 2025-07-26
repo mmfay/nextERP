@@ -128,6 +128,13 @@ export default function GeneralLedgerPage() {
             >
               Financial Dimensions
             </SecureButton>
+            <SecureButton
+              permission={Permissions.SETUP_GL}
+              onClick={() => router.push("/general_ledger/posting")}
+              className="px-6 py-3 rounded-md bg-gray-800 hover:bg-gray-700 text-white transition"
+            >
+              Posting
+            </SecureButton>
           </div>
         </section>
       </main>

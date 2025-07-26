@@ -98,5 +98,10 @@ class JournalLine(BaseModel):
     debit: float
     credit: float
 
+class PostingSetup(BaseModel):
+    module: int
+    type: str
+    accountType: str 
+    account: str
 
 

@@ -10,7 +10,8 @@ from app.api.v1.general_ledger.schemas import (
     TrialBalanceEntry,
     SubledgerEntry,
     GeneralJournal,
-    JournalLine
+    JournalLine,
+    PostingSetup
 )
 from datetime import datetime, date
 from uuid import uuid4
@@ -370,3 +371,63 @@ _journal_lines: dict[str, list[JournalLine]] = {
         ),
     ],
 }
+
+# 0 = Purchase
+# 1 = Inventory
+# 2 = Sales
+_posting_setup: list[PostingSetup] = [
+    PostingSetup(
+        module=0,
+        type="Purchase Accrual",
+        accountType="Liability",
+        account="2000",
+    ),
+    PostingSetup(
+        module=0,
+        type="Accounts Payable",
+        accountType="Liability",
+        account="2000",
+    ),
+    PostingSetup(
+        module=0,
+        type="Invoice Price Variance",
+        accountType="Expense",
+        account="5000",
+    ),
+    PostingSetup(
+        module=1,
+        type="Inventory",
+        accountType="Asset",
+        account="1000",
+    ),
+    PostingSetup(
+        module=1,
+        type="Inventory Gain",
+        accountType="Revenue",
+        account="4000",
+    ),
+    PostingSetup(
+        module=1,
+        type="Inventory Loss",
+        accountType="Expense",
+        account="5000",
+    ),
+    PostingSetup(
+        module=2,
+        type="Revenue",
+        accountType="Revenue",
+        account="1000",
+    ),
+    PostingSetup(
+        module=2,
+        type="COGS",
+        accountType="Expense",
+        account="4000",
+    ),
+    PostingSetup(
+        module=2,
+        type="Accounts Receivable",
+        accountType="Asset",
+        account="5000",
+    ),
+]

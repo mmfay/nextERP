@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.general_ledger.routes import router as gl_router
+from app.api.v1.inventory.routes import router as inv_router
 from app.api.v1.auth.routes import router as auth_router 
 
 app = FastAPI()
@@ -14,4 +15,5 @@ app.add_middleware(
 )
 
 app.include_router(gl_router, prefix="/api/v1/general_ledger", tags=["GeneralLedger"])
+app.include_router(inv_router, prefix="/api/v1/inventory", tags=["Inventory"])
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["Auth"])

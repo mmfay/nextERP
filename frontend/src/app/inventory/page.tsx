@@ -25,7 +25,7 @@ export default function InventoryPage() {
           <div className="flex flex-wrap gap-4">
             <SecureButton
               permission={Permissions.MOD_GL}
-              onClick={() => router.push("/general_ledger/trial_balance")}
+              onClick={() => router.push("/inventory/inventory_value")}
               className="px-6 py-3 rounded-md bg-blue-600 hover:bg-blue-700 text-white transition"
             >
               Inventory Value

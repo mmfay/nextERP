@@ -13,9 +13,9 @@ export default function SystemAdminPage() {
       <main className="pt-24 px-8 sm:px-16 space-y-10">
         {/* Page Heading */}
         <section>
-          <h1 className="text-4xl font-bold mb-2">General Ledger</h1>
+          <h1 className="text-4xl font-bold mb-2">System Administrations</h1>
           <p className="text-gray-700 dark:text-gray-400">
-            Access financial data and configure ledger behavior.
+            Access and configure system behavior.
           </p>
         </section>
 
@@ -25,7 +25,7 @@ export default function SystemAdminPage() {
           <div className="flex flex-wrap gap-4">
             <SecureButton
               permission={Permissions.MOD_SYSADMIN}
-              onClick={() => router.push("/general_ledger/trial_balance")}
+              onClick={() => router.push("/sys_admin/users")}
               className="px-6 py-3 rounded-md bg-blue-600 hover:bg-blue-700 text-white transition"
             >
               Users

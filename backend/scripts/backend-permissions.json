@@ -8,5 +8,6 @@
     "mod_gl",
     "mod_purch",
     "mod_sales",
+    "mod_sysAdmin",
     "setup_gl"
 ]

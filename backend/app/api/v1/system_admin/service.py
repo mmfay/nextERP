@@ -1,4 +1,4 @@
-from .schemas import ( Users )
+from .schemas import ( Users, UsersCreate )
 from datetime import datetime, date
 from uuid import uuid4
 from typing import List, Optional, Dict
@@ -12,3 +12,20 @@ from app.services.sequences import get_next_id
 # -----------------------------
 def get_users() -> list[Users]:
     return _users
+
+def create_user(user: UsersCreate) -> Users:
+    new_user = Users(
+        userid=user.userid,
+        email=user.email,
+        firstName=user.firstName,
+        lastName=user.lastName,
+        password=user.password,
+        enabled=user.enabled,
+    )
+    _users.append(new_user)
+    return new_user
+
+def delete_users_by_userid(userids: list[str]):
+    print(userids)
+    global _users
+    _users = [u for u in _users if u.userid not in userids]

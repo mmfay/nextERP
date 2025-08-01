@@ -2,14 +2,17 @@
 
 import { useEffect, useState, useRef } from "react";
 import {
-  fetchUserAccounts 
+  fetchUserAccounts, deleteUserAccounts, createUserAccount
 } from "@/lib/api/system_admin/users";
 import { SecureButton } from "@/app/components/SecureButton";
 import { Permissions } from "@/app/config/permissions";
 
 export type UserAccounts = {
+  userid: string;
   email: string;
   password: string;
+  firstName: string;
+  lastName: string;
   enabled: boolean;
 };
 
@@ -19,8 +22,11 @@ export default function UserAccountsPage() {
   const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
   const [showAddModal, setShowAddModal] = useState(false);
   const [newUser, setNewUser] = useState<UserAccounts>({
+    userid: "",
     email: "",
     password: "",
+    firstName: "",
+    lastName: "",
     enabled: true,
   });
 
@@ -40,10 +46,10 @@ export default function UserAccountsPage() {
     }
   }, [selectedUsers, userAccounts]);
 
-  const handleToggleSelect = (email: string) => {
+  const handleToggleSelect = (userid: string) => {
     setSelectedUsers((prev) => {
       const newSet = new Set(prev);
-      newSet.has(email) ? newSet.delete(email) : newSet.add(email);
+      newSet.has(userid) ? newSet.delete(userid) : newSet.add(userid);
       return newSet;
     });
   };
@@ -53,7 +59,7 @@ export default function UserAccountsPage() {
       const emails = Array.from(selectedUsers);
       await deleteUserAccounts(emails);
       setUserAccounts((prev) =>
-        prev.filter((user) => !selectedUsers.has(user.email))
+        prev.filter((user) => !selectedUsers.has(user.userid))
       );
       setSelectedUsers(new Set());
     } catch (err: any) {
@@ -67,7 +73,14 @@ export default function UserAccountsPage() {
       const created = await createUserAccount(newUser);
       setUserAccounts((prev) => [...prev, created]);
       setShowAddModal(false);
-      setNewUser({ email: "", password: "", enabled: "true" });
+      setNewUser({
+        userid: "",
+        email: "",
+        password: "",
+        firstName: "",
+        lastName: "",
+        enabled: true,
+      });
     } catch (err: any) {
       alert(err.message);
     }
@@ -75,18 +88,18 @@ export default function UserAccountsPage() {
 
   return (
     <div className="min-h-screen flex flex-col items-center pt-24 px-4 sm:px-16">
-      <main className="w-full max-w-4xl space-y-10">
+      <main className="w-full max-w-6xl space-y-10">
         {/* Controls */}
         <section className="flex justify-center gap-4">
           <SecureButton
-            permission={Permissions.SYSTEM_ADMIN}
+            permission={Permissions.MOD_SYSADMIN}
             onClick={() => setShowAddModal(true)}
             className="px-6 py-3 rounded-md bg-green-600 hover:bg-green-700 text-white"
           >
             Add User
           </SecureButton>
           <SecureButton
-            permission={Permissions.SYSTEM_ADMIN}
+            permission={Permissions.MOD_SYSADMIN}
             onClick={handleDelete}
             disabled={selectedUsers.size === 0}
             className={`px-6 py-3 rounded-md transition ${
@@ -123,23 +136,28 @@ export default function UserAccountsPage() {
                           if (selectedUsers.size === userAccounts.length) {
                             setSelectedUsers(new Set());
                           } else {
-                            setSelectedUsers(new Set(userAccounts.map((u) => u.email)));
+                            setSelectedUsers(
+                              new Set(userAccounts.map((u) => u.userid))
+                            );
                           }
                         }}
                         className="form-checkbox h-4 w-4 text-blue-600"
                       />
                     </th>
+                    <th className="px-4 py-2 border-b">User ID</th>
                     <th className="px-4 py-2 border-b">Email</th>
+                    <th className="px-4 py-2 border-b">First Name</th>
+                    <th className="px-4 py-2 border-b">Last Name</th>
                     <th className="px-4 py-2 border-b">Enabled</th>
                   </tr>
                 </thead>
                 <tbody>
                   {userAccounts.map((user) => {
-                    const isSelected = selectedUsers.has(user.email);
+                    const isSelected = selectedUsers.has(user.userid);
                     return (
                       <tr
                         key={user.email}
-                        onClick={() => handleToggleSelect(user.email)}
+                        onClick={() => handleToggleSelect(user.userid)}
                         className={`border-b hover:bg-gray-50 ${
                           isSelected ? "bg-blue-50" : ""
                         } cursor-pointer`}
@@ -153,7 +171,10 @@ export default function UserAccountsPage() {
                             className="form-checkbox h-4 w-4 text-blue-600"
                           />
                         </td>
+                        <td className="px-4 py-2">{user.userid}</td>
                         <td className="px-4 py-2">{user.email}</td>
+                        <td className="px-4 py-2">{user.firstName}</td>
+                        <td className="px-4 py-2">{user.lastName}</td>
                         <td className="px-4 py-2">
                           <input
                             type="checkbox"
@@ -172,7 +193,7 @@ export default function UserAccountsPage() {
         </section>
       </main>
 
-      {/* Modal */}
+      {/* Add User Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl space-y-4">
@@ -180,12 +201,45 @@ export default function UserAccountsPage() {
 
             <div className="space-y-3">
               <div>
+                <label className="block text-sm font-medium">User ID</label>
+                <input
+                  type="text"
+                  value={newUser.userID}
+                  onChange={(e) =>
+                    setNewUser((prev) => ({ ...prev, userID: e.target.value }))
+                  }
+                  className="w-full mt-1 px-3 py-2 border rounded-md"
+                />
+              </div>
+              <div>
                 <label className="block text-sm font-medium">Email</label>
                 <input
                   type="email"
                   value={newUser.email}
                   onChange={(e) =>
                     setNewUser((prev) => ({ ...prev, email: e.target.value }))
+                  }
+                  className="w-full mt-1 px-3 py-2 border rounded-md"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium">First Name</label>
+                <input
+                  type="text"
+                  value={newUser.firstName}
+                  onChange={(e) =>
+                    setNewUser((prev) => ({ ...prev, firstName: e.target.value }))
+                  }
+                  className="w-full mt-1 px-3 py-2 border rounded-md"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium">Last Name</label>
+                <input
+                  type="text"
+                  value={newUser.lastName}
+                  onChange={(e) =>
+                    setNewUser((prev) => ({ ...prev, lastName: e.target.value }))
                   }
                   className="w-full mt-1 px-3 py-2 border rounded-md"
                 />
@@ -202,19 +256,22 @@ export default function UserAccountsPage() {
                 />
               </div>
               <div>
-              <label className="block text-sm font-medium">Enabled</label>
-              <div className="mt-1">
-                <input
-                  type="checkbox"
-                  checked={newUser.enabled}
-                  onChange={(e) =>
-                    setNewUser((prev) => ({ ...prev, enabled: e.target.checked }))
-                  }
-                  className="h-4 w-4 text-green-600"
-                />{" "}
-                <span className="ml-2 text-sm text-gray-700">Active</span>
+                <label className="block text-sm font-medium">Enabled</label>
+                <div className="mt-1">
+                  <input
+                    type="checkbox"
+                    checked={newUser.enabled}
+                    onChange={(e) =>
+                      setNewUser((prev) => ({
+                        ...prev,
+                        enabled: e.target.checked,
+                      }))
+                    }
+                    className="h-4 w-4 text-green-600"
+                  />{" "}
+                  <span className="ml-2 text-sm text-gray-700">Active</span>
+                </div>
               </div>
-            </div>
             </div>
 
             <div className="flex justify-end gap-4 pt-4">

@@ -1,5 +1,8 @@
 export type UserAccounts = {
   email: string;
+  userid: string;
+  firstName: string;
+  lastName: string;
   password: string;
   enabled: boolean;
 };
@@ -18,4 +21,41 @@ export async function fetchUserAccounts(): Promise<UserAccounts[]> {
   }
 
   return res.json();
+}
+
+/**
+ * createUserAccount - Creates a new user account.
+ * @param user - user account data
+ * @returns created user
+ */
+export async function createUserAccount(user: UserAccounts): Promise<UserAccounts> {
+  const res = await fetch("http://localhost:8000/api/v1/system_admin/users", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(user),
+  });
+
+  if (!res.ok) {
+    throw new Error("Failed to create user account");
+  }
+
+  return res.json();
+}
+
+/**
+ * deleteUserAccounts - Deletes multiple users by email
+ * @param userids - array of user IDs to delete
+ */
+export async function deleteUserAccounts(userids: string[]): Promise<void> {
+  const res = await fetch("http://localhost:8000/api/v1/system_admin/users", {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ userids }),
+  });
+
+  if (!res.ok) {
+    throw new Error("Failed to delete user accounts");
+  }
 }

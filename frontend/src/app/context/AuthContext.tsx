@@ -39,6 +39,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       if (res.ok) {
         const data = await res.json();
+        console.log("✅ /me response:", data);
         setUser({
           id: data.user.id,
           name: data.user.name,

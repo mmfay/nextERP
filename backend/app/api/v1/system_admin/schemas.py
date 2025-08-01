@@ -23,3 +23,11 @@ class UsersDeleteRequest(BaseModel):
 class UserEnablePatchRequest(BaseModel):
     userid: str
     enabled: bool
+
+class UserPermissions(BaseModel):
+    userid: str
+    permission: str
+
+class Permissions(BaseModel):
+    name: str
+    description: str

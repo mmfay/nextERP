@@ -30,6 +30,13 @@ export default function SystemAdminPage() {
             >
               Users
             </SecureButton>
+            <SecureButton
+              permission={Permissions.MOD_SYSADMIN}
+              onClick={() => router.push("/sys_admin/permissions")}
+              className="px-6 py-3 rounded-md bg-blue-600 hover:bg-blue-700 text-white transition"
+            >
+              Permissions
+            </SecureButton>
           </div>
         </section>
 

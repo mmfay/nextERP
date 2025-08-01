@@ -24,3 +24,10 @@ def delete_users(request: UsersDeleteRequest):
         delete_users_by_userid(request.userids)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+    
+@router.patch("/users", status_code=status.HTTP_204_NO_CONTENT)
+def patch_user_enabled(request: UserEnablePatchRequest):
+    try:
+        update_user_enabled(request.userid, request.enabled)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))

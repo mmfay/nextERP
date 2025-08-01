@@ -59,3 +59,21 @@ export async function deleteUserAccounts(userids: string[]): Promise<void> {
     throw new Error("Failed to delete user accounts");
   }
 }
+
+/**
+ * updateUserEnabled - Updates a user's enabled status
+ * @param userid - user ID
+ * @param enabled - new enabled state (true or false)
+ */
+export async function updateUserEnabled(userid: string, enabled: boolean): Promise<void> {
+  const res = await fetch("http://localhost:8000/api/v1/system_admin/users", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ userid, enabled }),
+  });
+
+  if (!res.ok) {
+    throw new Error("Failed to update user enabled state");
+  }
+}

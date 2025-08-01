@@ -2,7 +2,10 @@
 
 import { useEffect, useState, useRef } from "react";
 import {
-  fetchUserAccounts, deleteUserAccounts, createUserAccount
+  fetchUserAccounts,
+  deleteUserAccounts,
+  createUserAccount,
+  updateUserEnabled,
 } from "@/lib/api/system_admin/users";
 import { SecureButton } from "@/app/components/SecureButton";
 import { Permissions } from "@/app/config/permissions";
@@ -56,14 +59,25 @@ export default function UserAccountsPage() {
 
   const handleDelete = async () => {
     try {
-      const emails = Array.from(selectedUsers);
-      await deleteUserAccounts(emails);
+      const userids = Array.from(selectedUsers);
+      await deleteUserAccounts(userids);
       setUserAccounts((prev) =>
         prev.filter((user) => !selectedUsers.has(user.userid))
       );
       setSelectedUsers(new Set());
     } catch (err: any) {
       alert(err.message || "Error deleting user accounts");
+    }
+  };
+
+  const handleToggleEnabled = async (userid: string, enabled: boolean) => {
+    try {
+      await updateUserEnabled(userid, enabled);
+      setUserAccounts((prev) =>
+        prev.map((u) => (u.userid === userid ? { ...u, enabled } : u))
+      );
+    } catch (err: any) {
+      alert(err.message || "Failed to update enabled state");
     }
   };
 
@@ -156,7 +170,7 @@ export default function UserAccountsPage() {
                     const isSelected = selectedUsers.has(user.userid);
                     return (
                       <tr
-                        key={user.email}
+                        key={user.userid}
                         onClick={() => handleToggleSelect(user.userid)}
                         className={`border-b hover:bg-gray-50 ${
                           isSelected ? "bg-blue-50" : ""
@@ -179,7 +193,10 @@ export default function UserAccountsPage() {
                           <input
                             type="checkbox"
                             checked={user.enabled}
-                            disabled
+                            onChange={(e) =>
+                              handleToggleEnabled(user.userid, e.target.checked)
+                            }
+                            onClick={(e) => e.stopPropagation()}
                             className="h-4 w-4 text-green-600"
                           />
                         </td>
@@ -204,9 +221,9 @@ export default function UserAccountsPage() {
                 <label className="block text-sm font-medium">User ID</label>
                 <input
                   type="text"
-                  value={newUser.userID}
+                  value={newUser.userid}
                   onChange={(e) =>
-                    setNewUser((prev) => ({ ...prev, userID: e.target.value }))
+                    setNewUser((prev) => ({ ...prev, userid: e.target.value }))
                   }
                   className="w-full mt-1 px-3 py-2 border rounded-md"
                 />

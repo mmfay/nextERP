@@ -19,3 +19,7 @@ class UsersCreate(BaseModel):
 
 class UsersDeleteRequest(BaseModel):
     userids: List[str]
+
+class UserEnablePatchRequest(BaseModel):
+    userid: str
+    enabled: bool

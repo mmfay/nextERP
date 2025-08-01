@@ -29,3 +29,10 @@ def delete_users_by_userid(userids: list[str]):
     print(userids)
     global _users
     _users = [u for u in _users if u.userid not in userids]
+
+def update_user_enabled(userid: str, enabled: bool):
+    for user in _users:
+        if user.userid == userid:
+            user.enabled = enabled
+            return
+    raise ValueError("User not found")

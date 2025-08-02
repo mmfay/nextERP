@@ -9,6 +9,7 @@ export const Permissions = {
     MOD_INVENT: "mod_invent",
     MOD_PURCH: "mod_purch",
     MOD_SALES: "mod_sales",
+    MOD_SYSADMIN: "mod_sysAdmin",
     SETUP_GL: "setup_gl",
   // Add more as needed
 } as const;

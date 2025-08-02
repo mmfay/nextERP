@@ -30,7 +30,6 @@ def get_inventory_value() -> list[InventoryByDimension]:
                     valueFinancial=inv.valueFinancial,
                     qtyPhysical=inv.qtyPhysical,
                     warehouse=dim.warehouse,
-                    aisle=dim.aisle,
                     location=dim.location
                 )
             )

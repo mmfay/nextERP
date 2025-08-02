@@ -6,7 +6,6 @@ import { fetchInventoryValue } from "@/lib/api/inventory/inventoryValue";
 export type InventoryValue = {
   item: string;
   warehouse: string;
-  aisle: string;
   location: string;
   valuePhysical: number;
   valueFinancial: number;
@@ -20,7 +19,6 @@ export default function InventoryValuePage() {
   const [filters, setFilters] = useState({
     item: "",
     warehouse: "",
-    aisle: "",
     location: "",
     qtyPhysical: "",
     valuePhysical: "",
@@ -83,7 +81,6 @@ export default function InventoryValuePage() {
     return (
       matchString(inv.item, filters.item) &&
       matchString(inv.warehouse, filters.warehouse) &&
-      matchString(inv.aisle, filters.aisle) &&
       matchString(inv.location, filters.location) &&
       matchWithOperator(inv.qtyPhysical, filters.qtyPhysical) &&
       matchWithOperator(inv.valuePhysical, filters.valuePhysical) &&
@@ -107,7 +104,6 @@ export default function InventoryValuePage() {
               <tr className="bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white font-semibold">
                 <th className="px-4 py-2 border-b">Item</th>
                 <th className="px-4 py-2 border-b">Warehouse</th>
-                <th className="px-4 py-2 border-b">Aisle</th>
                 <th className="px-4 py-2 border-b">Location</th>
                 <th className="px-4 py-2 border-b text-right">Qty Physical</th>
                 <th className="px-4 py-2 border-b text-right">Value Physical</th>
@@ -117,7 +113,7 @@ export default function InventoryValuePage() {
               {/* Filter row */}
               <tr className="bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white">
                 {/* String filters */}
-                {["item", "warehouse", "aisle", "location"].map((key) => (
+                {["item", "warehouse", "location"].map((key) => (
                   <th key={key} className="px-4 py-1 border-b">
                     <input
                       type="text"
@@ -155,7 +151,6 @@ export default function InventoryValuePage() {
                 >
                   <td className="px-4 py-2">{inv.item}</td>
                   <td className="px-4 py-2">{inv.warehouse}</td>
-                  <td className="px-4 py-2">{inv.aisle}</td>
                   <td className="px-4 py-2">{inv.location}</td>
                   <td className="px-4 py-2 text-right">{inv.qtyPhysical}</td>
                   <td className="px-4 py-2 text-right">

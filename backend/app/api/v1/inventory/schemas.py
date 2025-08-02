@@ -12,14 +12,12 @@ class Inventory(BaseModel):
 
 class InventoryDimensions(BaseModel):
     warehouse: str
-    aisle: str 
     location: str
     record: int
 
 class InventoryByDimension(BaseModel):
     item: str 
     warehouse: str 
-    aisle: str
     location: str 
     valuePhysical: Decimal
     valueFinancial: Decimal

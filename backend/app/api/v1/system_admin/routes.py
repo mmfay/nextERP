@@ -40,6 +40,10 @@ def permissions() -> list[Permissions]:
 def users_permissions():
     return get_users_permissions()
 
-@router.get("/debug/user_permissions", response_model=List[UsersWithPermissions])
-def debug_user_permissions():
-    return get_users_permissions()
+@router.post("/user_permissions", response_model=List[UserPermissions])
+def add_user_permissions(data: UserPermissions):
+    return assign_permission(data.userid, data.permission)
+
+@router.delete("/user_permissions/{userid}/{permission}", response_model=List[UserPermissions])
+def delete_user_permissions(userid: str, permission: str):
+    return remove_permission(userid, permission)

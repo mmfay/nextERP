@@ -67,7 +67,7 @@ export async function addUserPermission(userid: string, permission: string): Pro
  * deleteUserPermission - Removes a permission from a specific user.
  */
 export async function deleteUserPermission(userid: string, permission: string): Promise<void> {
-  const res = await fetch("http://localhost:8000/api/v1/system_admin/user_permissions", {
+  const res = await fetch(`http://localhost:8000/api/v1/system_admin/user_permissions/${userid}/${permission}`, {
     method: "DELETE",
     headers: { "Content-Type": "application/json" },
     credentials: "include",

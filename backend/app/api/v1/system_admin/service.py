@@ -1,4 +1,4 @@
-from .schemas import ( Users, UsersCreate, Permissions, UsersWithPermissions )
+from .schemas import ( Users, UsersCreate, Permissions, UsersWithPermissions, UserPermissions )
 from datetime import datetime, date
 from uuid import uuid4
 from typing import List, Optional, Dict
@@ -71,3 +71,29 @@ def get_users_permissions() -> list[UsersWithPermissions]:
         ))
 
     return users_with_perms
+
+def assign_permission(userid: str, permission: str) -> list[UserPermissions]:
+    # Check if it already exists
+    exists = any(
+        up.userid == userid and up.permission == permission
+        for up in _user_permissions
+    )
+
+    if not exists:
+        _user_permissions.append(UserPermissions(userid=userid, permission=permission))
+
+    # Return updated list for this user
+    return [up for up in _user_permissions if up.userid == userid]
+
+
+def remove_permission(userid: str, permission: str) -> list[UserPermissions]:
+    global _user_permissions
+
+    # Filter out the record to delete
+    _user_permissions = [
+        up for up in _user_permissions
+        if not (up.userid == userid and up.permission == permission)
+    ]
+
+    # Return updated list for this user
+    return [up for up in _user_permissions if up.userid == userid]

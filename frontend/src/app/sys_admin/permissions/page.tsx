@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { fetchPermissions, fetchUsersPermissions } from "@/lib/api/system_admin/permissions";
+import {
+  fetchPermissions,
+  fetchUsersPermissions,
+  addUserPermission,
+  deleteUserPermission,
+} from "@/lib/api/system_admin/permissions";
 
 type Permission = {
   permission: string;
@@ -15,9 +20,7 @@ export default function PermissionsDragDrop() {
   const [draggedPerm, setDraggedPerm] = useState<Permission | null>(null);
   const [userPermissions, setUserPermissions] = useState<Record<string, Permission[]>>({});
   const [search, setSearch] = useState("");
-
-  const dropAlertRef = useRef<{ userid: string; name: string } | null>(null);
-  const removeAlertRef = useRef<{ userid: string; name: string } | null>(null);
+  const [userSearch, setUserSearch] = useState("");
 
   useEffect(() => {
     fetchUsersPermissions().then((data) => {
@@ -45,51 +48,50 @@ export default function PermissionsDragDrop() {
     });
   }, []);
 
-  useEffect(() => {
-    if (dropAlertRef.current) {
-      alert(`Assigned "${dropAlertRef.current.name}" to ${dropAlertRef.current.userid}`);
-      dropAlertRef.current = null;
-    }
-    if (removeAlertRef.current) {
-      alert(`Removed "${removeAlertRef.current.name}" from ${removeAlertRef.current.userid}`);
-      removeAlertRef.current = null;
-    }
-  }, [userPermissions]);
-
-  const handleDrop = (userid: string) => {
+  const handleDrop = async (userid: string) => {
     if (!draggedPerm) return;
 
     setUserPermissions((prev) => {
       const current = prev[userid] ?? [];
       const exists = current.some((p) => p.permission === draggedPerm.permission);
       if (exists) return prev;
-
-      dropAlertRef.current = { userid, name: draggedPerm.name };
       return { ...prev, [userid]: [...current, draggedPerm] };
     });
+
+    try {
+      await addUserPermission(userid, draggedPerm.permission);
+    } catch (error) {
+      console.error("Failed to assign permission:", error);
+    }
 
     setDraggedPerm(null);
   };
 
-  const handleRemove = (userid: string, permissionId: string) => {
+  const handleRemove = async (userid: string, permissionId: string) => {
+    const permToRemove = userPermissions[userid]?.find((p) => p.permission === permissionId);
+    if (!permToRemove) return;
+
     setUserPermissions((prev) => {
       const current = prev[userid] ?? [];
-      const updated = current.filter((p) => {
-        const match = p.permission === permissionId;
-        if (match) {
-          removeAlertRef.current = { userid, name: p.name };
-        }
-        return !match;
-      });
-
+      const updated = current.filter((p) => p.permission !== permissionId);
       return { ...prev, [userid]: updated };
     });
+
+    try {
+      await deleteUserPermission(userid, permissionId);
+    } catch (error) {
+      console.error("Failed to remove permission:", error);
+    }
   };
 
   const filteredPermissions = permissions.filter(
     (perm) =>
       perm.name.toLowerCase().includes(search.toLowerCase()) ||
       perm.description.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const filteredUsers = users.filter((user: any) =>
+    `${user.firstName} ${user.lastName} ${user.email}`.toLowerCase().includes(userSearch.toLowerCase())
   );
 
   return (
@@ -127,38 +129,48 @@ export default function PermissionsDragDrop() {
           </div>
 
           {/* User Drop Zones */}
-          <div className="flex-1 grid grid-cols-2 gap-6">
-            {users.map((user: any) => (
-              <div
-                key={user.userid}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={() => handleDrop(user.userid)}
-                className="p-4 border rounded shadow bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
-              >
-                <h3 className="font-semibold mb-2 text-gray-900 dark:text-white">
-                  {user.firstName} {user.lastName}
-                </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">{user.email}</p>
-                <div className="flex flex-wrap gap-2">
-                  {userPermissions[user.userid]?.map((perm, index) => {
-                    const key = perm?.permission
-                      ? `${user.userid}-${perm.permission}`
-                      : `${user.userid}-idx-${index}`;
+          <div className="flex-1 max-h-[70vh] overflow-y-auto pr-2">
+            <h2 className="text-2xl font-semibold mb-4">Users</h2>
+            <input
+              type="text"
+              placeholder="Search users..."
+              value={userSearch}
+              onChange={(e) => setUserSearch(e.target.value)}
+              className="w-full mb-4 px-3 py-2 rounded bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-black dark:text-white"
+            />
+            <div className="grid grid-cols-2 gap-6">
+              {filteredUsers.map((user: any) => (
+                <div
+                  key={user.userid}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={() => handleDrop(user.userid)}
+                  className="p-4 border rounded shadow bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
+                  <h3 className="font-semibold mb-2 text-gray-900 dark:text-white">
+                    {user.firstName} {user.lastName}
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">{user.email}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {userPermissions[user.userid]?.map((perm, index) => {
+                      const key = perm?.permission
+                        ? `${user.userid}-${perm.permission}`
+                        : `${user.userid}-idx-${index}`;
 
-                    return (
-                      <span
-                        key={key}
-                        className="px-2 py-1 bg-green-200 dark:bg-green-700 text-sm rounded cursor-pointer text-green-900 dark:text-green-100"
-                        onClick={() => handleRemove(user.userid, perm.permission)}
-                        title={perm.description}
-                      >
-                        {perm.name} ✕
-                      </span>
-                    );
-                  })}
+                      return (
+                        <span
+                          key={key}
+                          className="px-2 py-1 bg-green-200 dark:bg-green-700 text-sm rounded cursor-pointer text-green-900 dark:text-green-100"
+                          onClick={() => handleRemove(user.userid, perm.permission)}
+                          title={perm.description}
+                        >
+                          {perm.name} ✕
+                        </span>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </main>

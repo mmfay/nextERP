@@ -30,4 +30,13 @@ class UserPermissions(BaseModel):
 
 class Permissions(BaseModel):
     name: str
-    description: str
+    fullName: str
+    description: str   
+
+class UsersWithPermissions(BaseModel):
+    userid: str
+    email: str
+    firstName: str
+    lastName: str
+    enabled: bool
+    permissions: list[Permissions]

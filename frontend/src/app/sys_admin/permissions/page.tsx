@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { fetchUserAccounts } from "@/lib/api/system_admin/users";
+import { fetchPermissions, fetchUsersPermissions } from "@/lib/api/system_admin/permissions";
 
 type Permission = {
   permission: string;
@@ -9,29 +9,9 @@ type Permission = {
   description: string;
 };
 
-const PERMISSIONS: Permission[] = [
-  { permission: "base", name: "Base", description: "All Base Level Permissions" },
-  { permission: "view_dashboard", name: "View Dashboard", description: "View access to dashboard" },
-  { permission: "mod_gl", name: "GL Module", description: "General Ledger Module Access" },
-  { permission: "mod_purch", name: "Purchasing Module", description: "Purchasing Module Access" },
-  { permission: "mod_sales", name: "Sales Module", description: "Sales Module Access" },
-  { permission: "mod_sysAdmin", name: "System Admin", description: "System Administration Access" },
-  { permission: "setup_gl", name: "GL Setup", description: "General Ledger Setup Access" },
-  { permission: "setup_purch", name: "Purchasing Setup", description: "Purchasing Setup Access" },
-  { permission: "setup_sales", name: "Sales Setup", description: "Sales Setup Access" },
-  { permission: "extra_1", name: "Extra Permission 1", description: "Extra Description 1" },
-  { permission: "extra_2", name: "Extra Permission 2", description: "Extra Description 2" },
-  { permission: "extra_3", name: "Extra Permission 3", description: "Extra Description 3" },
-  { permission: "extra_4", name: "Extra Permission 4", description: "Extra Description 4" },
-  { permission: "extra_5", name: "Extra Permission 5", description: "Extra Description 5" },
-  { permission: "extra_6", name: "Extra Permission 6", description: "Extra Description 6" },
-  { permission: "extra_7", name: "Extra Permission 7", description: "Extra Description 7" },
-  { permission: "extra_8", name: "Extra Permission 8", description: "Extra Description 8" },
-  { permission: "extra_9", name: "Extra Permission 9", description: "Extra Description 9" }
-];
-
 export default function PermissionsDragDrop() {
-  const [users, setUsers] = useState([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [permissions, setPermissions] = useState<Permission[]>([]);
   const [draggedPerm, setDraggedPerm] = useState<Permission | null>(null);
   const [userPermissions, setUserPermissions] = useState<Record<string, Permission[]>>({});
   const [search, setSearch] = useState("");
@@ -40,10 +20,28 @@ export default function PermissionsDragDrop() {
   const removeAlertRef = useRef<{ userid: string; name: string } | null>(null);
 
   useEffect(() => {
-    fetchUserAccounts().then((data) => {
+    fetchUsersPermissions().then((data) => {
       setUsers(data);
-      const initial = Object.fromEntries(data.map((u: any) => [u.userid, []]));
+      const initial = Object.fromEntries(
+        data.map((u: any) => [
+          u.userid,
+          (u.permissions ?? []).map((p: any) => ({
+            permission: p.name,
+            name: p.fullName,
+            description: p.description,
+          })),
+        ])
+      );
       setUserPermissions(initial);
+    });
+
+    fetchPermissions().then((data) => {
+      const perms = data.map((p: any) => ({
+        permission: p.name,
+        name: p.fullName,
+        description: p.description,
+      }));
+      setPermissions(perms);
     });
   }, []);
 
@@ -88,14 +86,14 @@ export default function PermissionsDragDrop() {
     });
   };
 
-  const filteredPermissions = PERMISSIONS.filter(
+  const filteredPermissions = permissions.filter(
     (perm) =>
       perm.name.toLowerCase().includes(search.toLowerCase()) ||
       perm.description.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
-    <div className="min-h-screen bg-inherit text-inherit font-[family-name:var(--font-geist-sans)]">
+    <div className="min-h-screen bg-inherit text-inherit font-[var(--font-geist-sans)]">
       <main className="pt-24 px-8 sm:px-16 space-y-10">
         <section>
           <h1 className="text-4xl font-bold mb-6">Permission Assignment</h1>
@@ -142,16 +140,22 @@ export default function PermissionsDragDrop() {
                 </h3>
                 <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">{user.email}</p>
                 <div className="flex flex-wrap gap-2">
-                  {userPermissions[user.userid]?.map((perm) => (
-                    <span
-                      key={perm.permission}
-                      className="px-2 py-1 bg-green-200 dark:bg-green-700 text-sm rounded cursor-pointer text-green-900 dark:text-green-100"
-                      onClick={() => handleRemove(user.userid, perm.permission)}
-                      title={perm.description}
-                    >
-                      {perm.name} ✕
-                    </span>
-                  ))}
+                  {userPermissions[user.userid]?.map((perm, index) => {
+                    const key = perm?.permission
+                      ? `${user.userid}-${perm.permission}`
+                      : `${user.userid}-idx-${index}`;
+
+                    return (
+                      <span
+                        key={key}
+                        className="px-2 py-1 bg-green-200 dark:bg-green-700 text-sm rounded cursor-pointer text-green-900 dark:text-green-100"
+                        onClick={() => handleRemove(user.userid, perm.permission)}
+                        title={perm.description}
+                      >
+                        {perm.name} ✕
+                      </span>
+                    );
+                  })}
                 </div>
               </div>
             ))}

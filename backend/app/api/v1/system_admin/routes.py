@@ -31,3 +31,15 @@ def patch_user_enabled(request: UserEnablePatchRequest):
         update_user_enabled(request.userid, request.enabled)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    
+@router.get("/permissions", response_model=List[Permissions])
+def permissions() -> list[Permissions]:
+    return get_permissions()
+
+@router.get("/users_permissions", response_model=List[UsersWithPermissions])
+def users_permissions():
+    return get_users_permissions()
+
+@router.get("/debug/user_permissions", response_model=List[UsersWithPermissions])
+def debug_user_permissions():
+    return get_users_permissions()

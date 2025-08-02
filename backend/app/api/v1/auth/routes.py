@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Request, Response, HTTPException, Depends
 from jose import jwt, JWTError
 from datetime import datetime, timedelta
+from app.data.system_admin.in_memory_store import _users, _user_permissions
+from app.api.v1.system_admin.schemas import Users
 
 router = APIRouter()
 
@@ -9,27 +11,12 @@ SECRET_KEY = "your-secret-key"
 ALGORITHM = "HS256"
 COOKIE_NAME = "token"
 
-# 🧪 Simulated user + permission store
-USER_DB = {
-    "user@example.com": {
-        "id": "u_123",
-        "name": "Matt Fay",
-        "is_sys_admin": False,
-        "permissions": [
-            "base",
-            "view_dashboard",
-            "mod_gl",
-            "setup_gl"
-        ]
-    },
-    "admin@example.com": {
-        "id": "u_admin",
-        "name": "Sys Admin",
-        "is_sys_admin": True,
-        "permissions": [
-        ]
-    }
-}
+# 🔍 Find user in _users by email
+def get_user_by_email(email: str) -> Users | None:
+    for user in _users:
+        if user.email == email:
+            return user
+    return None
 
 # 🔐 Dependency to extract user from secure cookie
 def get_current_user(request: Request):
@@ -40,26 +27,26 @@ def get_current_user(request: Request):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email = payload.get("sub")
-        if not email or email not in USER_DB:
+        user = get_user_by_email(email)
+        if not email or not user:
             raise HTTPException(status_code=401, detail="Invalid token or user not found")
-        return USER_DB[email]
+        return user
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
 # ✅ Login route: validates and issues JWT via HttpOnly cookie
 @router.post("/login")
 async def login(request: Request, response: Response):
+
     data = await request.json()
     email = data.get("email")
     password = data.get("password")
 
-    # 🔒 Replace with DB check
-    if email in USER_DB and password == "password123":
+    user = get_user_by_email(email)
+
+    if user and user.password == password and user.enabled:
         token = jwt.encode(
-            {
-                "sub": email,
-                "exp": datetime.utcnow() + timedelta(days=1),
-            },
+            {"sub": user.email, "exp": datetime.utcnow() + timedelta(days=1)},
             SECRET_KEY,
             algorithm=ALGORITHM,
         )
@@ -80,14 +67,18 @@ async def login(request: Request, response: Response):
 # ✅ /me route: return current user + permissions
 @router.get("/me")
 async def get_me(user: dict = Depends(get_current_user)):
+
+    user_perms = [p.permission for p in _user_permissions if p.userid == user.userid]
+    is_sys_admin = "sysAdmin" in user_perms
+
     return {
         "user": {
-            "id": user["id"],
-            "name": user["name"],
-            "email": user["id"] + "@example.com",
-            "is_sys_admin": user.get("is_sys_admin", False)
+            "id": user.userid,
+            "name": f"{user.firstName} {user.lastName}",
+            "email": user.email,
+            "is_sys_admin": is_sys_admin,  # Replace with real field if needed
         },
-        "permissions": user["permissions"]
+        "permissions": user_perms
     }
 
 # ✅ Optional logout route

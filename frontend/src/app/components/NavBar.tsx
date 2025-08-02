@@ -60,6 +60,9 @@ export default function Nav() {
                 {can(Permissions.MOD_SALES) && (
                   <a href="/sales" className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">Sales</a>
                 )}
+                {can(Permissions.MOD_SYSADMIN) && (
+                  <a href="/sys_admin" className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">System Administration</a>
+                )}
               </div>
             )}
           </div>

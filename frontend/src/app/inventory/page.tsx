@@ -61,8 +61,8 @@ export default function InventoryPage() {
             </SecureButton>
              */}
             <SecureButton
-              permission={Permissions.SETUP_GL}
-              onClick={() => router.push("/general_ledger/configure_account_structures")}
+              permission={Permissions.MOD_INVENT}
+              onClick={() => router.push("/inventory/warehouse_setup")}
               className="px-6 py-3 rounded-md bg-gray-800 hover:bg-gray-700 text-white transition"
             >
               Warehouse Setup

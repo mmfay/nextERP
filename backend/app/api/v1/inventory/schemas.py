@@ -22,3 +22,21 @@ class InventoryByDimension(BaseModel):
     valuePhysical: Decimal
     valueFinancial: Decimal
     qtyPhysical: int
+
+class Warehouse(BaseModel):
+    warehouseID: str 
+    warehouseName: str
+    addressBook: int
+    record: int
+
+class Location(BaseModel):
+    locationID: str 
+    type: str
+    active: int 
+    warehouse: int
+    record: int
+
+class WarehousesWithLocations(BaseModel):
+    warehouseID: str 
+    warehouseName: str 
+    locationList: list[Location]

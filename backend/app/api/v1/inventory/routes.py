@@ -9,3 +9,7 @@ router = APIRouter()
 @router.get("/inventory_value")
 def inventory_value() -> list[InventoryByDimension]:
     return get_inventory_value()
+
+@router.get("/warehouse_setup")
+def warehouse_setup() -> list[WarehousesWithLocations]:
+    return get_warehouse_setup()

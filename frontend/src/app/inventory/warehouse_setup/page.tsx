@@ -1,41 +1,53 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { fetchWarehouseSetup } from "@/lib/api/inventory/warehouseSetup";
 
-// Dummy address data
 const addresses = [
   "123 Main St, Sacramento, CA",
   "456 Warehouse Rd, Reno, NV",
   "789 Distribution Ln, Fresno, CA",
 ];
 
-const initialWarehouses = [
-  {
-    code: "WH01",
-    name: "Sacramento DC",
-    address: addresses[0],
-    locations: [
-      { code: "LOC01", type: "Pick", active: true },
-      { code: "LOC02", type: "Bulk", active: true },
-    ],
-  },
-  {
-    code: "WH02",
-    name: "Reno Warehouse",
-    address: addresses[1],
-    locations: [
-      { code: "LOC03", type: "Staging", active: true },
-    ],
-  },
-];
+type Location = {
+  code: string;
+  type: string;
+  active: boolean;
+};
+
+type Warehouse = {
+  code: string;
+  name: string;
+  address: string;
+  locations: Location[];
+};
 
 export default function WarehouseSetupPage() {
-  const [warehouses, setWarehouses] = useState(initialWarehouses);
-  const [selectedWarehouseCode, setSelectedWarehouseCode] = useState<string | null>(warehouses[0]?.code || null);
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+  const [selectedWarehouseCode, setSelectedWarehouseCode] = useState<string | null>(null);
   const [editWarehouse, setEditWarehouse] = useState<{ code: string; name: string; address: string } | null>(null);
   const [showWarehouseModal, setShowWarehouseModal] = useState(false);
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [newLocation, setNewLocation] = useState<{ code: string; type: string; active: boolean }>({ code: "", type: "", active: true });
+
+  useEffect(() => {
+    fetchWarehouseSetup()
+      .then((data) => {
+        const transformed: Warehouse[] = data.map((wh: any, i: number) => ({
+          code: wh.warehouseID,
+          name: wh.warehouseName,
+          address: addresses[i % addresses.length],
+          locations: wh.locationList.map((loc: any) => ({
+            code: loc.locationID,
+            type: loc.type,
+            active: loc.active === 1,
+          })),
+        }));
+        setWarehouses(transformed);
+        setSelectedWarehouseCode(transformed[0]?.code || null);
+      })
+      .catch((err) => console.error("Failed to load warehouse data:", err));
+  }, []);
 
   const selectedWarehouse = warehouses.find((wh) => wh.code === selectedWarehouseCode);
 
@@ -84,17 +96,12 @@ export default function WarehouseSetupPage() {
           ...wh,
           locations: wh.locations.map((loc) =>
             loc.code === locCode
-              ? {
-                  ...loc,
-                  active: !loc.active,
-                }
+              ? { ...loc, active: !loc.active }
               : loc
           ),
         };
       })
     );
-    const warehouseName = selectedWarehouse?.name || "";
-    console.log(`Toggled active state for location ${locCode} in ${warehouseName}`);
   };
 
   return (

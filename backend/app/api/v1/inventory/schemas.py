@@ -1,5 +1,6 @@
 from pydantic import BaseModel, constr
 from decimal import Decimal
+from app.api.v1.shared.addresses.schemas import ( Address )
 
 class Inventory(BaseModel):
     item: str
@@ -39,4 +40,5 @@ class Location(BaseModel):
 class WarehousesWithLocations(BaseModel):
     warehouseID: str 
     warehouseName: str 
+    address: Address
     locationList: list[Location]

@@ -12,11 +12,11 @@ _inventory: list[Inventory] = [
 ]
 
 _inventory_dimensions: list[InventoryDimensions] = [
-    InventoryDimensions(warehouse="1", location="a", record=1),
-    InventoryDimensions(warehouse="1", location="b", record=2),
-    InventoryDimensions(warehouse="1", location="a", record=3),
-    InventoryDimensions(warehouse="1", location="b", record=4),
-    InventoryDimensions(warehouse="1", location="c", record=5),
+    InventoryDimensions(warehouse="WH01", location="LOC01", record=1),
+    InventoryDimensions(warehouse="WH01", location="LOC02", record=2),
+    InventoryDimensions(warehouse="WH02", location="LOC03", record=3),
+    InventoryDimensions(warehouse="WH03", location="LOC04", record=4),
+    InventoryDimensions(warehouse="WH03", location="LOC04", record=5),
 ]
 
 # Used as an in Memory Join

@@ -1,4 +1,4 @@
-from app.api.v1.shared.schemas import ( Address )
+from app.api.v1.shared.addresses.schemas import ( Address )
 
 # Sequence stores
 _sequence_store = {"GJ": 8, "PO": 0}

@@ -2,12 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { fetchWarehouseSetup } from "@/lib/api/inventory/warehouseSetup";
-
-const addresses = [
-  "123 Main St, Sacramento, CA",
-  "456 Warehouse Rd, Reno, NV",
-  "789 Distribution Ln, Fresno, CA",
-];
+import { fetchAddresses } from "@/lib/api/shared/addresses/addresses";
 
 type Location = {
   code: string;
@@ -15,38 +10,50 @@ type Location = {
   active: boolean;
 };
 
-type Warehouse = {
+type Address = {
+  street: string;
+  city: string;
+  state: string;
+  zip: string;
+  record: number;
+};
+
+type DisplayWarehouse = {
   code: string;
   name: string;
-  address: string;
+  address: Address | null;
   locations: Location[];
 };
 
 export default function WarehouseSetupPage() {
-  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+  const [warehouses, setWarehouses] = useState<DisplayWarehouse[]>([]);
+  const [addresses, setAddresses] = useState<Address[]>([]);
   const [selectedWarehouseCode, setSelectedWarehouseCode] = useState<string | null>(null);
-  const [editWarehouse, setEditWarehouse] = useState<{ code: string; name: string; address: string } | null>(null);
+  const [editWarehouse, setEditWarehouse] = useState<{ code: string; name: string; addressRecord: number } | null>(null);
   const [showWarehouseModal, setShowWarehouseModal] = useState(false);
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [newLocation, setNewLocation] = useState<{ code: string; type: string; active: boolean }>({ code: "", type: "", active: true });
 
   useEffect(() => {
-    fetchWarehouseSetup()
-      .then((data) => {
-        const transformed: Warehouse[] = data.map((wh: any, i: number) => ({
+    Promise.all([fetchWarehouseSetup(), fetchAddresses()])
+      .then(([warehouseData, addressData]) => {
+        setAddresses(addressData);
+
+        const transformed: DisplayWarehouse[] = warehouseData.map((wh: any) => ({
           code: wh.warehouseID,
           name: wh.warehouseName,
-          address: addresses[i % addresses.length],
+          address: wh.address || null,
           locations: wh.locationList.map((loc: any) => ({
             code: loc.locationID,
             type: loc.type,
             active: loc.active === 1,
           })),
         }));
+
         setWarehouses(transformed);
         setSelectedWarehouseCode(transformed[0]?.code || null);
       })
-      .catch((err) => console.error("Failed to load warehouse data:", err));
+      .catch((err) => console.error("Failed to load warehouse or address data:", err));
   }, []);
 
   const selectedWarehouse = warehouses.find((wh) => wh.code === selectedWarehouseCode);
@@ -56,16 +63,24 @@ export default function WarehouseSetupPage() {
       setEditWarehouse({
         code: selectedWarehouse.code,
         name: selectedWarehouse.name,
-        address: selectedWarehouse.address,
+        addressRecord: selectedWarehouse.address?.record || addresses[0]?.record || 0,
       });
       setShowWarehouseModal(true);
     }
   };
 
   const handleWarehouseSave = () => {
+    const selectedAddress = addresses.find((addr) => addr.record === editWarehouse?.addressRecord) || null;
+
     setWarehouses((prev) =>
       prev.map((wh) =>
-        wh.code === editWarehouse?.code ? { ...wh, ...editWarehouse } : wh
+        wh.code === editWarehouse?.code
+          ? {
+              ...wh,
+              name: editWarehouse.name,
+              address: selectedAddress,
+            }
+          : wh
       )
     );
     setShowWarehouseModal(false);
@@ -112,7 +127,7 @@ export default function WarehouseSetupPage() {
         <button
           className="bg-blue-600 text-white px-4 py-2 rounded-md"
           onClick={() => {
-            setEditWarehouse({ code: "", name: "", address: addresses[0] });
+            setEditWarehouse({ code: "", name: "", addressRecord: addresses[0]?.record || 0 });
             setShowWarehouseModal(true);
           }}
         >
@@ -127,6 +142,7 @@ export default function WarehouseSetupPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Warehouse list */}
         <div className="border rounded-md overflow-hidden">
           <h2 className="bg-gray-100 dark:bg-gray-800 p-3 font-semibold">Warehouses</h2>
           <ul className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -144,6 +160,7 @@ export default function WarehouseSetupPage() {
           </ul>
         </div>
 
+        {/* Warehouse detail panel */}
         <div className="border rounded-md p-4">
           {selectedWarehouse ? (
             <>
@@ -157,13 +174,21 @@ export default function WarehouseSetupPage() {
                 </button>
               </div>
               <p><span className="font-medium">Code:</span> {selectedWarehouse.code}</p>
-              <p><span className="font-medium">Address:</span> {selectedWarehouse.address}</p>
+              {selectedWarehouse.address ? (
+                <p>
+                  <span className="font-medium">Address:</span>{" "}
+                  {selectedWarehouse.address.street}, {selectedWarehouse.address.city}, {selectedWarehouse.address.state} {selectedWarehouse.address.zip}
+                </p>
+              ) : (
+                <p><span className="font-medium">Address:</span> Not Assigned</p>
+              )}
             </>
           ) : (
             <p>Select a warehouse to see details.</p>
           )}
         </div>
 
+        {/* Locations table */}
         <div className="border rounded-md overflow-x-auto">
           <h2 className="bg-gray-100 dark:bg-gray-800 p-3 font-semibold">Locations</h2>
           {selectedWarehouse && selectedWarehouse.locations.length > 0 ? (
@@ -197,6 +222,7 @@ export default function WarehouseSetupPage() {
         </div>
       </div>
 
+      {/* Warehouse modal */}
       {showWarehouseModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-900 p-6 rounded-lg w-full max-w-md">
@@ -221,14 +247,19 @@ export default function WarehouseSetupPage() {
                 className="w-full px-3 py-2 border rounded"
               />
               <select
-                value={editWarehouse?.address || ''}
+                value={editWarehouse?.addressRecord || ''}
                 onChange={(e) =>
-                  setEditWarehouse((prev) => ({ ...prev!, address: e.target.value }))
+                  setEditWarehouse((prev) => ({
+                    ...prev!,
+                    addressRecord: parseInt(e.target.value),
+                  }))
                 }
                 className="w-full px-3 py-2 border rounded"
               >
-                {addresses.map((addr, idx) => (
-                  <option key={idx} value={addr}>{addr}</option>
+                {addresses.map((addr) => (
+                  <option key={addr.record} value={addr.record}>
+                    {addr.street}, {addr.city}, {addr.state} {addr.zip}
+                  </option>
                 ))}
               </select>
             </div>
@@ -244,6 +275,7 @@ export default function WarehouseSetupPage() {
         </div>
       )}
 
+      {/* Location modal */}
       {showLocationModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-900 p-6 rounded-lg w-full max-w-md">

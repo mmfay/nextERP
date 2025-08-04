@@ -11,7 +11,9 @@ from app.data.inventory.in_memory_store import (
     _locations,
     _warehouses_with_locations
     )
-from app.data.shared.in_memory_store import *
+from app.data.shared.in_memory_store import (
+    _address_book
+)
 from app.services.sequences import get_next_id
 # -----------------------------
 # Inventory Value
@@ -49,11 +51,13 @@ def get_warehouse_setup():
     for wh in _warehouses:
 
         matching_locations = [loc for loc in _locations if loc.warehouse == wh.record]
+        matching_address = next((add for add in _address_book if add.record == wh.record), None)
 
         _warehouses_with_locations.append(WarehousesWithLocations(
             warehouseID=wh.warehouseID,
             warehouseName=wh.warehouseName,
+            address=matching_address,
             locationList=matching_locations
         ))
-        
+    print(_warehouses_with_locations)
     return _warehouses_with_locations

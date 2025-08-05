@@ -13,3 +13,17 @@ def inventory_value() -> list[InventoryByDimension]:
 @router.get("/warehouse_setup")
 def warehouse_setup() -> list[WarehousesWithLocations]:
     return get_warehouse_setup()
+
+@router.post("/warehouse", status_code=201)
+def create_warehouse(data: WarehouseCreate):
+    return insert_warehouse(data)
+
+@router.post("/location", status_code=201)
+def create_location(data: LocationCreate):
+    print(data)
+    return insert_location(data)
+
+@router.patch("/location", status_code=200)
+def update_location(data: LocationUpdate):
+    return updatelocation(data)
+

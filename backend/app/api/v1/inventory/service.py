@@ -1,4 +1,4 @@
-from .schemas import ( InventoryByDimension, WarehousesWithLocations )
+from .schemas import ( InventoryByDimension, WarehousesWithLocations, WarehouseCreate, LocationCreate, LocationUpdate, Warehouse, Location )
 from datetime import datetime, date
 from uuid import uuid4
 from typing import List, Optional, Dict
@@ -14,7 +14,7 @@ from app.data.inventory.in_memory_store import (
 from app.data.shared.in_memory_store import (
     _address_book
 )
-from app.services.sequences import get_next_id
+from app.services.sequences import get_next_id, get_next_record
 # -----------------------------
 # Inventory Value
 # -----------------------------
@@ -49,15 +49,49 @@ def get_warehouse_setup():
     _warehouses_with_locations.clear()
 
     for wh in _warehouses:
-
+        
         matching_locations = [loc for loc in _locations if loc.warehouse == wh.record]
-        matching_address = next((add for add in _address_book if add.record == wh.record), None)
+        matching_address = next((add for add in _address_book if add.record == wh.addressBook), None)
 
         _warehouses_with_locations.append(WarehousesWithLocations(
             warehouseID=wh.warehouseID,
             warehouseName=wh.warehouseName,
             address=matching_address,
-            locationList=matching_locations
+            locationList=matching_locations,
+            record=wh.record
         ))
-    print(_warehouses_with_locations)
+    
     return _warehouses_with_locations
+
+def insert_warehouse(data: WarehouseCreate):
+   
+    record = get_next_record("Warehouse")
+ 
+    _warehouses.append(Warehouse(
+        warehouseID=data.warehouseID,
+        warehouseName=data.warehouseName,
+        addressBook=data.addressRecord,
+        record=record,
+    ))
+    
+    return {"status": "created", "record": record}
+
+def insert_location(data: LocationCreate):
+    print(data)
+    record = get_next_record("Location")
+    _locations.append(Location(
+        locationID=data.locationID,
+        type=data.type,
+        active=data.active,
+        warehouse=data.warehouse,
+        record=record
+    ))
+    return {"status": "created", "record": record}
+
+def updatelocation(data: LocationUpdate):
+    
+    for loc in _locations:
+        if loc.record == data.record:
+            loc.active = data.active
+            return {"status": "updated"}
+    raise HTTPException(status_code=404, detail="Location not found")

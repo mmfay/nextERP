@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { fetchWarehouseSetup } from "@/lib/api/inventory/warehouseSetup";
+import {
+  fetchWarehouseSetup,
+  createLocation,
+  createWarehouse,
+  updateLocationStatus,
+} from "@/lib/api/inventory/warehouseSetup";
 import { fetchAddresses } from "@/lib/api/shared/addresses/addresses";
 
 type Location = {
@@ -21,6 +26,7 @@ type Address = {
 type DisplayWarehouse = {
   code: string;
   name: string;
+  record: number;
   address: Address | null;
   locations: Location[];
 };
@@ -38,23 +44,27 @@ export default function WarehouseSetupPage() {
     Promise.all([fetchWarehouseSetup(), fetchAddresses()])
       .then(([warehouseData, addressData]) => {
         setAddresses(addressData);
-
-        const transformed: DisplayWarehouse[] = warehouseData.map((wh: any) => ({
-          code: wh.warehouseID,
-          name: wh.warehouseName,
-          address: wh.address || null,
-          locations: wh.locationList.map((loc: any) => ({
-            code: loc.locationID,
-            type: loc.type,
-            active: loc.active === 1,
-          })),
-        }));
-
+        const transformed = transformWarehouseData(warehouseData);
         setWarehouses(transformed);
         setSelectedWarehouseCode(transformed[0]?.code || null);
       })
       .catch((err) => console.error("Failed to load warehouse or address data:", err));
   }, []);
+
+  const transformWarehouseData = (warehouseData: any[]): DisplayWarehouse[] =>
+    warehouseData.map((wh) => ({
+      code: wh.warehouseID,
+      name: wh.warehouseName,
+      record: wh.record,
+      address: wh.address || null,
+      locations: Array.isArray(wh.locationList)
+        ? wh.locationList.map((loc: any) => ({
+            code: loc.locationID,
+            type: loc.type,
+            active: loc.active === 1,
+          }))
+        : [],
+    }));
 
   const selectedWarehouse = warehouses.find((wh) => wh.code === selectedWarehouseCode);
 
@@ -69,54 +79,66 @@ export default function WarehouseSetupPage() {
     }
   };
 
-  const handleWarehouseSave = () => {
-    const selectedAddress = addresses.find((addr) => addr.record === editWarehouse?.addressRecord) || null;
-
-    setWarehouses((prev) =>
-      prev.map((wh) =>
-        wh.code === editWarehouse?.code
-          ? {
-              ...wh,
-              name: editWarehouse.name,
-              address: selectedAddress,
-            }
-          : wh
-      )
-    );
-    setShowWarehouseModal(false);
+  const handleWarehouseSave = async () => {
+    if (!editWarehouse) return;
+    try {
+      await createWarehouse({
+        warehouseID: editWarehouse.code,
+        warehouseName: editWarehouse.name,
+        addressRecord: editWarehouse.addressRecord,
+      });
+      const updatedWarehouses = await fetchWarehouseSetup();
+      const transformed = transformWarehouseData(updatedWarehouses);
+      setWarehouses(transformed);
+      setSelectedWarehouseCode(editWarehouse.code);
+    } catch (err) {
+      console.error("Failed to save warehouse:", err);
+    } finally {
+      setShowWarehouseModal(false);
+    }
   };
 
-  const handleLocationSave = () => {
-    if (!selectedWarehouseCode || !newLocation.code || !newLocation.type) return;
+  const handleLocationSave = async () => {
+    const wh = warehouses.find((w) => w.code === selectedWarehouseCode);
+    console.log(JSON.stringify(wh));
 
-    setWarehouses((prev) =>
-      prev.map((wh) =>
-        wh.code === selectedWarehouseCode
-          ? {
-              ...wh,
-              locations: [...wh.locations, newLocation],
-            }
-          : wh
-      )
-    );
-    setNewLocation({ code: "", type: "", active: true });
-    setShowLocationModal(false);
+    if (!wh || !newLocation.code || !newLocation.type || typeof wh.record !== "number") {
+      console.warn("Missing warehouse or invalid data for location creation");
+      return;
+    }
+    try {
+      await createLocation({
+        locationID: newLocation.code,
+        type: newLocation.type,
+        active: newLocation.active ? 1 : 0,
+        warehouse: wh.record,
+      });
+      const updatedWarehouses = await fetchWarehouseSetup();
+      setWarehouses(transformWarehouseData(updatedWarehouses));
+    } catch (err) {
+      console.error("Failed to create location:", err);
+    } finally {
+      setNewLocation({ code: "", type: "", active: true });
+      setShowLocationModal(false);
+    }
   };
 
-  const toggleLocationActive = (locCode: string) => {
-    setWarehouses((prev) =>
-      prev.map((wh) => {
-        if (wh.code !== selectedWarehouseCode) return wh;
-        return {
-          ...wh,
-          locations: wh.locations.map((loc) =>
-            loc.code === locCode
-              ? { ...loc, active: !loc.active }
-              : loc
-          ),
-        };
-      })
-    );
+  const toggleLocationActive = async (locCode: string) => {
+    const wh = warehouses.find((w) => w.code === selectedWarehouseCode);
+    if (!wh) return;
+    const loc = wh.locations.find((l) => l.code === locCode);
+    if (!loc) return;
+    try {
+      const updatedWarehouses = await fetchWarehouseSetup();
+      const backendLoc = updatedWarehouses
+        .flatMap((wh: any) => wh.locationList)
+        .find((l: any) => l.locationID === loc.code);
+      if (!backendLoc) throw new Error("Backend location not found");
+      await updateLocationStatus(backendLoc.record, loc.active ? 0 : 1);
+      setWarehouses(transformWarehouseData(await fetchWarehouseSetup()));
+    } catch (err) {
+      console.error("Failed to toggle location status:", err);
+    }
   };
 
   return (

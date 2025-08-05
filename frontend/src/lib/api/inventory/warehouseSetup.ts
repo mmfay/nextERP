@@ -9,6 +9,7 @@ export type Location = {
 export type WarehousesWithLocations = {
   warehouseID: string;
   warehouseName: string;
+  record: number;
   locationList: Location[];
 };
 
@@ -19,3 +20,35 @@ export async function fetchWarehouseSetup(): Promise<WarehousesWithLocations[]> 
   }
   return res.json();
 }
+
+export async function createWarehouse(data: { warehouseID: string; warehouseName: string; addressRecord: number;}) {
+  const res = await fetch("http://localhost:8000/api/v1/inventory/warehouse", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("Failed to create warehouse");
+  return res.json();
+}
+
+export async function createLocation(data: { locationID: string; type: string; active: number; warehouse: number; }) {
+  console.log(data);
+  const res = await fetch("http://localhost:8000/api/v1/inventory/location", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("Failed to create location");
+  return res.json();
+}
+
+export async function updateLocationStatus(record: number, active: number) {
+  const res = await fetch("http://localhost:8000/api/v1/inventory/location", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ record, active }),
+  });
+  if (!res.ok) throw new Error("Failed to update location");
+  return res.json();
+}
+

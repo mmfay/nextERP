@@ -42,3 +42,20 @@ class WarehousesWithLocations(BaseModel):
     warehouseName: str 
     address: Address
     locationList: list[Location]
+    record: int
+
+class LocationCreate(BaseModel):
+    locationID: str
+    type: str
+    active: int
+    warehouse: int  # warehouse record
+
+class LocationUpdate(BaseModel):
+    record: int
+    active: int
+
+class WarehouseCreate(BaseModel):
+    warehouseID: str
+    warehouseName: str
+    addressRecord: int
+

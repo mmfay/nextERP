@@ -1,4 +1,4 @@
-from .schemas import ( InventoryByDimension, WarehousesWithLocations, WarehouseCreate, LocationCreate, LocationUpdate, Warehouse, Location )
+from .schemas import ( InventoryByDimension, WarehousesWithLocations, WarehouseCreate, LocationCreate, LocationUpdate, WarehouseUpdate, Warehouse, Location )
 from datetime import datetime, date
 from uuid import uuid4
 from typing import List, Optional, Dict
@@ -95,3 +95,12 @@ def updatelocation(data: LocationUpdate):
             loc.active = data.active
             return {"status": "updated"}
     raise HTTPException(status_code=404, detail="Location not found")
+
+def updatewarehouse(data: WarehouseUpdate):
+    for wh in _warehouses:
+        if wh.record == data.record:
+            wh.warehouseID = data.warehouseID
+            wh.warehouseName = data.warehouseName
+            wh.addressBook = data.addressRecord
+            return {"status": "updated"}
+    raise HTTPException(status_code=404, detail="Warehouse not found")

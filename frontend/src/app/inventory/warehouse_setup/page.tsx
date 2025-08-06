@@ -6,6 +6,7 @@ import {
   createLocation,
   createWarehouse,
   updateLocationStatus,
+  updateWarehouse
 } from "@/lib/api/inventory/warehouseSetup";
 import { fetchAddresses } from "@/lib/api/shared/addresses/addresses";
 
@@ -35,7 +36,7 @@ export default function WarehouseSetupPage() {
   const [warehouses, setWarehouses] = useState<DisplayWarehouse[]>([]);
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [selectedWarehouseCode, setSelectedWarehouseCode] = useState<string | null>(null);
-  const [editWarehouse, setEditWarehouse] = useState<{ code: string; name: string; addressRecord: number } | null>(null);
+  const [editWarehouse, setEditWarehouse] = useState<{ code: string; name: string; addressRecord: number; record?: number } | null>(null);
   const [showWarehouseModal, setShowWarehouseModal] = useState(false);
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [newLocation, setNewLocation] = useState<{ code: string; type: string; active: boolean }>({ code: "", type: "", active: true });
@@ -74,29 +75,44 @@ export default function WarehouseSetupPage() {
         code: selectedWarehouse.code,
         name: selectedWarehouse.name,
         addressRecord: selectedWarehouse.address?.record || addresses[0]?.record || 0,
+        record: selectedWarehouse.record,
       });
       setShowWarehouseModal(true);
     }
   };
 
-  const handleWarehouseSave = async () => {
-    if (!editWarehouse) return;
-    try {
+const handleWarehouseSave = async () => {
+  if (!editWarehouse) return;
+  
+  try {
+    if (editWarehouse.record !== undefined) {
+      // update
+      await updateWarehouse({
+        record: editWarehouse.record,
+        warehouseID: editWarehouse.code,
+        warehouseName: editWarehouse.name,
+        addressRecord: editWarehouse.addressRecord,
+      });
+    } else {
+      // create
       await createWarehouse({
         warehouseID: editWarehouse.code,
         warehouseName: editWarehouse.name,
         addressRecord: editWarehouse.addressRecord,
       });
-      const updatedWarehouses = await fetchWarehouseSetup();
-      const transformed = transformWarehouseData(updatedWarehouses);
-      setWarehouses(transformed);
-      setSelectedWarehouseCode(editWarehouse.code);
-    } catch (err) {
-      console.error("Failed to save warehouse:", err);
-    } finally {
-      setShowWarehouseModal(false);
     }
-  };
+
+    const updatedWarehouses = await fetchWarehouseSetup();
+    const transformed = transformWarehouseData(updatedWarehouses);
+    setWarehouses(transformed);
+    setSelectedWarehouseCode(editWarehouse.code);
+  } catch (err) {
+    console.error("Failed to save warehouse:", err);
+  } finally {
+    setShowWarehouseModal(false);
+  }
+};
+
 
   const handleLocationSave = async () => {
     const wh = warehouses.find((w) => w.code === selectedWarehouseCode);

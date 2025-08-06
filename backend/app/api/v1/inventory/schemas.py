@@ -59,3 +59,8 @@ class WarehouseCreate(BaseModel):
     warehouseName: str
     addressRecord: int
 
+class WarehouseUpdate(BaseModel):
+    warehouseID: str
+    warehouseName: str
+    addressRecord: int
+    record: int

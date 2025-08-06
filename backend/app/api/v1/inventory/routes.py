@@ -18,6 +18,10 @@ def warehouse_setup() -> list[WarehousesWithLocations]:
 def create_warehouse(data: WarehouseCreate):
     return insert_warehouse(data)
 
+@router.patch("/warehouse", status_code=200)
+def update_warehouse(data: WarehouseUpdate):
+    return updatewarehouse(data)
+
 @router.post("/location", status_code=201)
 def create_location(data: LocationCreate):
     print(data)

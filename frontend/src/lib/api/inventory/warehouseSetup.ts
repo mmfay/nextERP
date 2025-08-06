@@ -52,3 +52,21 @@ export async function updateLocationStatus(record: number, active: number) {
   return res.json();
 }
 
+export async function updateWarehouse(data: {
+  record: number;
+  warehouseID: string;
+  warehouseName: string;
+  addressRecord: number;
+}) {
+  const res = await fetch("http://localhost:8000/api/v1/inventory/warehouse", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+
+  if (!res.ok) {
+    throw new Error("Failed to update warehouse");
+  }
+
+  return res.json();
+}

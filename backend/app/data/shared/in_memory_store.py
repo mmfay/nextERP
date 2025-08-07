@@ -1,8 +1,8 @@
 from app.api.v1.shared.addresses.schemas import ( Address )
 
 # Sequence stores
-_sequence_store = {"GJ": 8, "PO": 0}
-_record_store = {"Inventory": 5, "InventoryDimensions": 5, "Address": 3, "Warehouse": 3, "Location": 4}
+_sequence_store = {"GJ": 8, "PO": 0, "JOUR": 5}
+_record_store = {"Inventory": 5, "InventoryDimensions": 5, "Address": 3, "Warehouse": 3, "Location": 4, "Journal":5, "JourLine":3}
 
 # Shared Data
 _address_book: list[Address] = [

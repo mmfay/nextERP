@@ -1,0 +1,5 @@
+export enum JOURNALTYPE {
+  ADJUSTMENT = 0,
+  COUNT = 1,
+  TRANSFER = 2
+}

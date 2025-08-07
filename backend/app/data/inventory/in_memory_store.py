@@ -41,3 +41,17 @@ _locations: list[Location] = [
 _warehouses_with_locations: list[WarehousesWithLocations] = [
 
 ]
+
+_inventory_journal_header: list[InventoryJournalHeader] = [
+    InventoryJournalHeader(journalID="JOUR-000001",status=0,type=0,description="Something",record=1),
+    InventoryJournalHeader(journalID="JOUR-000002",status=0,type=0,description="Something",record=2),
+    InventoryJournalHeader(journalID="JOUR-000003",status=0,type=0,description="Something",record=3),
+    InventoryJournalHeader(journalID="JOUR-000004",status=0,type=0,description="Something",record=4),
+    InventoryJournalHeader(journalID="JOUR-000005",status=0,type=0,description="Something",record=5),
+]
+
+_inventory_journal_lines: list[InventoryJournalLine] = [
+    InventoryJournalLine(journalID="JOUR-000001",item="A",dimension=1,qty=2.00,cost=80.00,record=1),
+    InventoryJournalLine(journalID="JOUR-000001",item="A",dimension=1,qty=2.00,cost=80.00,record=2),
+    InventoryJournalLine(journalID="JOUR-000001",item="A",dimension=1,qty=2.00,cost=80.00,record=3),
+]

@@ -1,16 +1,29 @@
-from .schemas import ( InventoryByDimension, WarehousesWithLocations, WarehouseCreate, LocationCreate, LocationUpdate, WarehouseUpdate, Warehouse, Location )
+from .schemas import ( 
+    InventoryByDimension, 
+    WarehousesWithLocations, 
+    WarehouseCreate, 
+    LocationCreate, 
+    LocationUpdate, 
+    WarehouseUpdate, 
+    Warehouse, 
+    Location,
+    InventoryJournalHeader,
+    InventoryJournalLine 
+)
 from datetime import datetime, date
 from uuid import uuid4
 from typing import List, Optional, Dict
-from fastapi import HTTPException, status
+from fastapi import HTTPException, status, Query
 from app.data.inventory.in_memory_store import (
     _inventory, 
     _inventory_dimensions, 
     _inventory_by_dimension,
     _warehouses,
     _locations,
-    _warehouses_with_locations
-    )
+    _warehouses_with_locations,
+    _inventory_journal_header,
+    _inventory_journal_lines
+)
 from app.data.shared.in_memory_store import (
     _address_book
 )
@@ -104,3 +117,6 @@ def updatewarehouse(data: WarehouseUpdate):
             wh.addressBook = data.addressRecord
             return {"status": "updated"}
     raise HTTPException(status_code=404, detail="Warehouse not found")
+
+def get_journal_headers(type: int = Query(...)) -> list[InventoryJournalHeader]:
+    return [j for j in _inventory_journal_header if j.type == type]

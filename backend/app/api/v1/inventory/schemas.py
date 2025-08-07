@@ -64,3 +64,18 @@ class WarehouseUpdate(BaseModel):
     warehouseName: str
     addressRecord: int
     record: int
+
+class InventoryJournalHeader(BaseModel):
+    journalID: str
+    status: int 
+    type: int 
+    description: str 
+    record: int
+
+class InventoryJournalLine(BaseModel):
+    journalID: str
+    item: str 
+    dimension: int
+    qty: int 
+    cost: Decimal
+    record: int

@@ -31,3 +31,7 @@ def create_location(data: LocationCreate):
 def update_location(data: LocationUpdate):
     return updatelocation(data)
 
+@router.get("/inventory_journal", response_model=List[InventoryJournalHeader])
+def inventory_journal(type: int = Query(...)):
+    return get_journal_headers(type)
+

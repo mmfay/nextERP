@@ -8,11 +8,13 @@ from .schemas import (
     Warehouse, 
     Location,
     InventoryJournalHeader,
-    InventoryJournalLine 
+    InventoryJournalLine,
+    InventoryJournalLinesWithDimension
 )
 from datetime import datetime, date
 from uuid import uuid4
 from typing import List, Optional, Dict
+from decimal import Decimal
 from fastapi import HTTPException, status, Query
 from app.data.inventory.in_memory_store import (
     _inventory, 
@@ -22,7 +24,8 @@ from app.data.inventory.in_memory_store import (
     _locations,
     _warehouses_with_locations,
     _inventory_journal_header,
-    _inventory_journal_lines
+    _inventory_journal_lines,
+    _journal_lines_with_dimension
 )
 from app.data.shared.in_memory_store import (
     _address_book
@@ -120,3 +123,30 @@ def updatewarehouse(data: WarehouseUpdate):
 
 def get_journal_headers(type: int = Query(...)) -> list[InventoryJournalHeader]:
     return [j for j in _inventory_journal_header if j.type == type]
+
+def get_journal_lines(journalID: str = Query(...)):
+    # Find raw journal lines matching the journalID
+    matching_lines = [line for line in _inventory_journal_lines if line.journalID == journalID]
+
+    if not matching_lines:
+        raise HTTPException(status_code=404, detail="No journal lines found for this journal")
+
+    # Simulated "join" to enrich each line with its dimension data
+    _journal_lines_with_dimension.clear()
+    for line in matching_lines:
+        
+        dim = next((d for d in _inventory_dimensions if d.record == line.dimension), None)
+        if dim is None:
+            raise HTTPException(status_code=500, detail=f"Dimension record {line.dimension} not found")
+
+        enriched_line = InventoryJournalLinesWithDimension(
+            journalID=line.journalID,
+            item=line.item,
+            dimension=dim,
+            qty=line.qty,
+            cost=Decimal(line.cost),
+            record=line.record
+        )
+        _journal_lines_with_dimension.append(enriched_line)
+    
+    return _journal_lines_with_dimension

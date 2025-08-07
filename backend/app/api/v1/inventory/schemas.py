@@ -79,3 +79,11 @@ class InventoryJournalLine(BaseModel):
     qty: int 
     cost: Decimal
     record: int
+
+class InventoryJournalLinesWithDimension(BaseModel):
+    journalID: str
+    item: str 
+    dimension: InventoryDimensions
+    qty: int 
+    cost: Decimal
+    record: int

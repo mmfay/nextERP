@@ -55,3 +55,8 @@ _inventory_journal_lines: list[InventoryJournalLine] = [
     InventoryJournalLine(journalID="JOUR-000001",item="A",dimension=1,qty=2.00,cost=80.00,record=2),
     InventoryJournalLine(journalID="JOUR-000001",item="A",dimension=1,qty=2.00,cost=80.00,record=3),
 ]
+
+# in memory join
+_journal_lines_with_dimension: list[InventoryJournalLinesWithDimension] = [
+
+]

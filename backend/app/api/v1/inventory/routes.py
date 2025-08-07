@@ -35,3 +35,6 @@ def update_location(data: LocationUpdate):
 def inventory_journal(type: int = Query(...)):
     return get_journal_headers(type)
 
+@router.get("/journal_lines", response_model=List[InventoryJournalLinesWithDimension])
+def journal_lines(journalID: str = Query(...)):
+    return get_journal_lines(journalID)

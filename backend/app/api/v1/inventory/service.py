@@ -11,8 +11,7 @@ from .schemas import (
     InventoryJournalLine,
     InventoryJournalLinesWithDimension
 )
-from datetime import datetime, date
-from uuid import uuid4
+
 from typing import List, Optional, Dict
 from decimal import Decimal
 from fastapi import HTTPException, status, Query
@@ -27,6 +26,7 @@ from app.data.inventory.in_memory_store import (
     _inventory_journal_lines,
     _journal_lines_with_dimension
 )
+
 from app.data.shared.in_memory_store import (
     _address_book
 )
@@ -134,7 +134,7 @@ def get_journal_lines(journalID: str = Query(...)):
     # Simulated "join" to enrich each line with its dimension data
     _journal_lines_with_dimension.clear()
     for line in matching_lines:
-        
+
         dim = next((d for d in _inventory_dimensions if d.record == line.dimension), None)
         if dim is None:
             raise HTTPException(status_code=500, detail=f"Dimension record {line.dimension} not found")
@@ -150,3 +150,20 @@ def get_journal_lines(journalID: str = Query(...)):
         _journal_lines_with_dimension.append(enriched_line)
     
     return _journal_lines_with_dimension
+
+def get_inventory_journal_header(journalID: str):
+    journal = next((j for j in _inventory_journal_header if j.journalID == journalID), None)
+    if not journal:
+        raise HTTPException(status_code=404, detail="Journal not found")
+    return journal
+
+def validate_post_journal(journalID: str):
+    validate = True # Add Validation logic
+
+    if (validate):
+        for journal in _inventory_journal_header:
+            if journal.journalID == journalID:
+                journal.status = 1
+                return journal
+        
+    return None

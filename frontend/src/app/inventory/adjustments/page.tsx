@@ -64,9 +64,17 @@ export default function InventoryAdjustmentPage() {
                     className="border-t hover:bg-gray-50"
                   >
                     <td className="px-3 py-2 border text-blue-600 hover:underline">
-                      <Link href={`/inventory/adjustments/${j.journalID}?journalID=${j.journalID}`}>
-                        {j.journalID}
-                      </Link>
+                        <Link
+                          href={{
+                            pathname: `/inventory/adjustments/${j.journalID}`,
+                            query: {
+                              journalID: j.journalID,
+                              status: j.status,
+                            },
+                          }}
+                        >
+                          {j.journalID}
+                        </Link>
                     </td>
                     <td className="px-3 py-2 border">{j.description}</td>
                     <td className="px-3 py-2 border">

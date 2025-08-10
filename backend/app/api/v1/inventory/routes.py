@@ -38,3 +38,12 @@ def inventory_journal(type: int = Query(...)):
 @router.get("/journal_lines", response_model=List[InventoryJournalLinesWithDimension])
 def journal_lines(journalID: str = Query(...)):
     return get_journal_lines(journalID)
+
+# --- Route ---
+@router.get("/journal_header/{journal_id}", response_model=InventoryJournalHeader)
+def inventory_journal_header(journal_id: str):
+    return get_inventory_journal_header(journal_id)
+
+@router.post("/journal_header/{journal_id}", response_model=InventoryJournalHeader)
+def post_inventory_journal(journal_id: str):
+    return validate_post_journal(journal_id)

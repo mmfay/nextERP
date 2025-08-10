@@ -70,6 +70,7 @@ class InventoryJournalHeader(BaseModel):
     status: int 
     type: int 
     description: str 
+    ledgerDim: int
     record: int
 
 class InventoryJournalLine(BaseModel):
@@ -78,6 +79,7 @@ class InventoryJournalLine(BaseModel):
     dimension: int
     qty: int 
     cost: Decimal
+    ledgerDim: int
     record: int
 
 class InventoryJournalLinesWithDimension(BaseModel):

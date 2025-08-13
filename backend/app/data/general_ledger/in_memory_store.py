@@ -3,7 +3,6 @@ from app.api.v1.general_ledger.schemas import (
     CreateMainAccount, 
     FinancialDimension, 
     UpdateFinancialDimension, 
-    DimensionValue,
     AccountCombination,
     AccountCombinationRequest,
     GLEntry,
@@ -11,7 +10,8 @@ from app.api.v1.general_ledger.schemas import (
     SubledgerEntry,
     GeneralJournal,
     JournalLine,
-    PostingSetup
+    PostingSetup,
+    FinancialDimensionValue,
 )
 from datetime import datetime, date
 from uuid import uuid4
@@ -36,11 +36,14 @@ _financial_dimensions: list[FinancialDimension] = [
     FinancialDimension(id=8, name="Region", in_use=True),
 ]
 
-_dimension_values: dict[int, list[DimensionValue]] = {
-    1: [DimensionValue(code="01", description="Marketing"), DimensionValue(code="02", description="Finance")],
-    2: [DimensionValue(code="100", description="West Coast"), DimensionValue(code="200", description="East Coast")],
-    8: [DimensionValue(code="01", description="Northwest"), DimensionValue(code="02", description="Southwest")],
-}
+_financial_dimension_values: list[FinancialDimensionValue] = [
+    FinancialDimensionValue(code="01", description="Marketing", dimension=1, record=1),
+    FinancialDimensionValue(code="02", description="Finance", dimension=1, record=2),
+    FinancialDimensionValue(code="100", description="West Coast", dimension=2, record=3),
+    FinancialDimensionValue(code="200", description="East Coast", dimension=2, record=4),
+    FinancialDimensionValue(code="01", description="Northwest", dimension=8, record=5),
+    FinancialDimensionValue(code="02", description="Southwest", dimension=8, record=6),
+]
 
 _account_combinations: dict[str, list[AccountCombination]] = {
     "4000": [

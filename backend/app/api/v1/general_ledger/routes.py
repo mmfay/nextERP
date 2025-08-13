@@ -44,10 +44,12 @@ def update_dimension(data: UpdateFinancialDimension):
 
 @router.get("/financial_dimensions/{dimension_id}/values")
 def api_get_values(dimension_id: int):
-    return get_dimension_values(dimension_id)
+    #return get_dimension_values(dimension_id)
+    return get_financial_dimension_values(dimension_id)
 
 @router.post("/financial_dimensions/{dimension_id}/values")
-def api_add_value(dimension_id: int, value: DimensionValue):
+def api_add_value(dimension_id: int, value: CreateFinancialDimensionValue):
+    print(dimension_id)
     success = add_dimension_value(dimension_id, value)
     if not success:
         raise HTTPException(status_code=400, detail="Code already exists")

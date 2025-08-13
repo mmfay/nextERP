@@ -6,14 +6,14 @@ from fastapi import HTTPException, status
 from app.data.general_ledger.in_memory_store import (
     _main_accounts,
     _financial_dimensions,
-    _dimension_values,
+    _financial_dimension_values,
     _account_combinations,
     _gl_entries,
     _general_journal_header,
     _journal_lines,
-    _posting_setup
+    _posting_setup,
 )
-from app.services.sequences import get_next_id
+from app.services.sequences import get_next_id, get_next_record
 # -----------------------------
 # Main Accounts
 # -----------------------------
@@ -49,23 +49,34 @@ def update_financial_dimension(data: UpdateFinancialDimension) -> FinancialDimen
 # -----------------------------
 # Dimension Values
 # -----------------------------
-def get_dimension_values(dimension_id: int) -> list[DimensionValue]:
-    return _dimension_values.get(dimension_id, [])
 
-def add_dimension_value(dimension_id: int, value: DimensionValue) -> bool:
-    values = _dimension_values.setdefault(dimension_id, [])
-    if any(v.code == value.code for v in values):
+def get_financial_dimension_values(dimension_id: int) -> list[FinancialDimensionValue]:
+    filtered = [
+        dv for dv in _financial_dimension_values
+        if dv.dimension == dimension_id
+    ]
+    return filtered
+
+def add_dimension_value(dimension_id: int, value: CreateFinancialDimensionValue) -> bool:
+    newEntry = FinancialDimensionValue(
+        code            = value.code,
+        description     = value.description,
+        dimension       = dimension_id,
+        record          = get_next_record("FDV")
+    )
+    if any(v.code == value.code for v in _financial_dimension_values):
         return False  # duplicate code
-    values.append(value)
+    _financial_dimension_values.append(newEntry)
     return True
 
 def delete_dimension_value(dimension_id: int, code: str) -> bool:
-    values = _dimension_values.get(dimension_id)
-    if values is not None:
-        updated = [v for v in values if v.code != code]
-        _dimension_values[dimension_id] = updated
-        return True
-    return False
+    global _financial_dimension_values
+    before_count = len(_financial_dimension_values)
+    _financial_dimension_values = [
+        v for v in _financial_dimension_values
+        if not (v.dimension == dimension_id and v.code == code)
+    ]
+    return len(_financial_dimension_values) < before_count
 
 # -----------------------------
 # Account Combinations

@@ -29,7 +29,13 @@ class UpdateFinancialDimension(BaseModel):
     name: str
     in_use: bool
 
-class DimensionValue(BaseModel):
+class FinancialDimensionValue(BaseModel):
+    code: str
+    description: str
+    dimension: int 
+    record: int
+
+class CreateFinancialDimensionValue(BaseModel):
     code: str
     description: str
 

@@ -6,110 +6,149 @@ import {
   fetchJournalLines,
   updateJournalLines,
   deleteJournalLine,
-  JournalLine,
+  type JournalLine,
 } from "@/lib/api/journalLines";
 import {
   fetchJournalHeader,
   postGeneralJournal,
   type GeneralJournal,
 } from "@/lib/api/generalJournals";
-import { fetchMainAccounts, MainAccount } from "@/lib/api/mainAccounts";
+import { fetchMainAccounts, type MainAccount } from "@/lib/api/mainAccounts";
+import { fetchFinancialDimensions } from "@/lib/api/financialDimensions";
+
+import AccountComboInput from "@/app/components/AccountComboInput";
+import MainAccountPicker from "@/app/components/FinancialDimensions/MainAccountPicker";
+import FinancialDimension from "@/app/components/FinancialDimensions/FinancialDimensionPicker";
+
+type UILine = JournalLine & { combo: Record<string, string> };
+
+const FD_KEYS = Array.from({ length: 8 }, (_, i) => `FD${i + 1}` as const);
+const emptyCombo = (): Record<string, string> =>
+  FD_KEYS.concat("MA" as const).reduce((acc, k) => ({ ...acc, [k]: "" }), {} as Record<string, string>);
+
+const comboToString = (combo: Record<string, string>, keys: string[], delimiter = "-") =>
+  keys.map((k) => (combo[k] ?? "").trim()).filter(Boolean).join(delimiter);
 
 export default function JournalLinesPage() {
-  const params = useSearchParams();
-  const journalId = params.get("id")!;
-
+  const journalId = useSearchParams().get("id")!;
   const [journalHeader, setJournalHeader] = useState<GeneralJournal | null>(null);
-  const [lines, setLines] = useState<JournalLine[]>([]);
-  const [mainAccounts, setMainAccounts] = useState<MainAccount[]>([]);
   const [journalStatus, setJournalStatus] = useState<"draft" | "posted" | null>(null);
+
+  const [lines, setLines] = useState<UILine[]>([]);
+  const [accountToDesc, setAccountToDesc] = useState<Record<string, string>>({});
+  const [fdInUseMap, setFdInUseMap] = useState<Record<string, boolean>>({});
+  const [fdLabels, setFdLabels] = useState<Record<string, string>>({}); // FD1->"Department", etc.
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [posting, setPosting] = useState(false);
 
-  const accountToDesc = useMemo(
-    () => Object.fromEntries(mainAccounts.map(({ account, description }) => [account, description])),
-    [mainAccounts]
-  );
-  const descToAccount = useMemo(
-    () => Object.fromEntries(mainAccounts.map(({ account, description }) => [description, account])),
-    [mainAccounts]
-  );
+  const [maPicker, setMaPicker] = useState<{ open: boolean; idx: number | null }>({ open: false, idx: null });
+  const [fdPicker, setFdPicker] = useState<{ open: boolean; idx: number | null; key: string; label?: string; initial?: string }>({
+    open: false, idx: null, key: "FD1",
+  });
 
-  // initial fetch
+  // Build the visible combo schema from fetched FD labels (fallback to FD#)
+  const comboSchema = useMemo(() => {
+    const base = [{ key: "MA", label: "Main", required: true, pattern: /^\d{1,10}$/, maxLength: 10 }];
+    const fds = FD_KEYS.map((k) => ({ key: k, label: fdLabels[k] || k, maxLength: 20 }));
+    return [...base, ...fds];
+  }, [fdLabels]);
+
+  // Initial load: header, lines, accounts, FDs
   useEffect(() => {
-    if (!journalId) return;
-    const fetchData = async () => {
+    let cancelled = false;
+    (async () => {
+      if (!journalId) return;
       setLoading(true);
       try {
-        const [rawLines, header, accounts] = await Promise.all([
+        const [rawLines, header, accounts, fds] = await Promise.all([
           fetchJournalLines(journalId),
           fetchJournalHeader(journalId),
           fetchMainAccounts(),
+          fetchFinancialDimensions(),
         ]);
-        setMainAccounts(accounts);
+        if (cancelled) return;
+
+        // accounts
+        const acctToDesc = Object.fromEntries(accounts.map(a => [a.account, a.description]));
+        setAccountToDesc(acctToDesc);
+
+        // header/status
         setJournalHeader(header);
         setJournalStatus(header.status);
-        // seed each line.description to match account
-        const acctMap = Object.fromEntries(accounts.map(({ account, description }) => [account, description]));
-        setLines(rawLines.map(l => ({ ...l, description: acctMap[l.account] ?? "" })));
-      } catch (err) {
-        console.error(err);
+
+        // financial dimensions -> inUse + labels
+        const inUse = Object.fromEntries((fds ?? []).map((fd: any) => [`FD${fd.id}`, !!fd.in_use]));
+        const labels = Object.fromEntries((fds ?? []).map((fd: any) => [`FD${fd.id}`, fd.name || `FD${fd.id}`]));
+        setFdInUseMap(inUse);
+        setFdLabels(labels);
+
+        // lines -> add combo seeded with MA
+        setLines(
+          rawLines.map((l) => ({
+            ...l,
+            description: acctToDesc[l.account] ?? l.description ?? "",
+            combo: { ...emptyCombo(), MA: l.account || "" },
+          }))
+        );
+      } catch (e) {
+        console.error(e);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
+    })();
+    return () => {
+      cancelled = true;
     };
-    fetchData();
   }, [journalId]);
 
-  // update a single cell
-  function handleLineChange(idx: number, field: keyof JournalLine, value: any) {
-    setLines(ls =>
-      ls.map((line, i) => {
-        if (i !== idx) return line;
-        const updated = { ...line };
-        if (field === "account") {
-          updated.account = value;
-          updated.description = accountToDesc[value] ?? "";
-        } else if (field === "description") {
-          updated.description = value;
-          updated.account = descToAccount[value] ?? "";
-        } else {
-          (updated as any)[field] = value;
-        }
-        return updated;
-      })
-    );
-  }
+  // Helpers
+  const updateLine = (idx: number, patch: Partial<UILine>) =>
+    setLines((ls) => ls.map((l, i) => (i === idx ? { ...l, ...patch } : l)));
 
-  // add blank row
-  function handleAddLine() {
-    setLines(ls => [
+  const handleLineChange = (idx: number, field: keyof JournalLine, value: any) =>
+    updateLine(idx, { [field]: value } as Partial<UILine>);
+
+  const handleAddLine = () =>
+    setLines((ls) => [
       ...ls,
-      { lineID: "", journalID: journalId, account: "", description: "", debit: 0, credit: 0 },
+      {
+        lineID: "",
+        journalID: journalId,
+        account: "",
+        description: "",
+        debit: 0,
+        credit: 0,
+        combo: emptyCombo(),
+      },
     ]);
-  }
 
-  // delete row locally (and optionally immediately on server)
-  async function handleDelete(idx: number) {
+  const handleDelete = async (idx: number) => {
     const line = lines[idx];
     if (line.lineID) {
-      try {
-        await deleteJournalLine(journalId, line.lineID);
-      } catch (err) {
-        console.error("Delete failed:", err);
-      }
+      try { await deleteJournalLine(journalId, line.lineID); } catch (err) { console.error("Delete failed:", err); }
     }
-    setLines(ls => ls.filter((_, i) => i !== idx));
-  }
+    setLines((ls) => ls.filter((_, i) => i !== idx));
+  };
 
-  // bulk-upsert all lines
-  async function handleSave() {
+  const handleSave = async () => {
     setSaving(true);
     try {
-      const updated = await updateJournalLines(journalId, lines);
-      const acctMap = Object.fromEntries(mainAccounts.map(({ account, description }) => [account, description]));
-      setLines(updated.map(l => ({ ...l, description: acctMap[l.account] ?? "" })));
+      const payload: JournalLine[] = lines.map(({ combo, ...rest }) => {
+        const main = (combo.MA ?? "").trim();
+        return { ...rest, account: main, description: accountToDesc[main] ?? rest.description ?? "" };
+      });
+      const updated = await updateJournalLines(journalId, payload);
+
+      // keep combos; re-sync descs from accounts
+      setLines((ls) =>
+        updated.map((u, i) => ({
+          ...u,
+          description: accountToDesc[u.account] ?? u.description ?? "",
+          combo: { ...ls[i]?.combo, MA: u.account || ls[i]?.combo?.MA || "" },
+        }))
+      );
       alert("Saved successfully!");
     } catch (err) {
       console.error("Save failed:", err);
@@ -117,14 +156,12 @@ export default function JournalLinesPage() {
     } finally {
       setSaving(false);
     }
-  }
+  };
 
-  // mark journal as posted
-  async function handlePost() {
+  const handlePost = async () => {
     if (!journalHeader) return;
     setPosting(true);
     try {
-      // pass the ID directly to your PATCH helper
       const updatedHeader = await postGeneralJournal(journalId);
       setJournalHeader(updatedHeader);
       setJournalStatus(updatedHeader.status);
@@ -135,7 +172,30 @@ export default function JournalLinesPage() {
     } finally {
       setPosting(false);
     }
-  }
+  };
+
+  // Picker interactions
+  const onSegmentClick = (idx: number, key: string, currentValue: string) => {
+    if (key === "MA") return setMaPicker({ open: true, idx });
+    const seg = comboSchema.find((s) => s.key === key);
+    setFdPicker({ open: true, idx, key, label: seg?.label || key, initial: currentValue });
+  };
+
+  const handlePickMA = (account: string) => {
+    if (maPicker.idx == null) return;
+    const desc = accountToDesc[account] ?? "";
+    setLines((ls) =>
+      ls.map((l, i) => (i === maPicker.idx ? { ...l, combo: { ...l.combo, MA: account }, account, description: desc } : l))
+    );
+    setMaPicker({ open: false, idx: null });
+  };
+
+  const handlePickFD = (value: string) => {
+    if (fdPicker.idx == null) return;
+    const key = fdPicker.key;
+    updateLine(fdPicker.idx, { combo: { ...lines[fdPicker.idx].combo, [key]: value } });
+    setFdPicker({ open: false, idx: null, key: "FD1" });
+  };
 
   return (
     <div className="min-h-screen flex flex-col items-center bg-inherit text-inherit font-[family-name:var(--font-geist-sans)]">
@@ -143,11 +203,9 @@ export default function JournalLinesPage() {
         <div className="flex flex-col items-center space-y-2">
           <h2 className="text-2xl font-semibold">Journal Lines for {journalId}</h2>
           {journalStatus && (
-            <span
-              className={`text-sm px-2 py-1 rounded-full font-medium ${
-                journalStatus === "draft" ? "bg-yellow-100 text-yellow-800" : "bg-green-100 text-green-800"
-              }`}
-            >
+            <span className={`text-sm px-2 py-1 rounded-full font-medium ${
+              journalStatus === "draft" ? "bg-yellow-100 text-yellow-800" : "bg-green-100 text-green-800"
+            }`}>
               Status: {journalStatus}
             </span>
           )}
@@ -157,13 +215,9 @@ export default function JournalLinesPage() {
           <div className="text-center py-8 text-gray-500">Loading...</div>
         ) : (
           <>
-            {/* toolbar */}
             {journalStatus === "draft" && (
               <div className="flex gap-3">
-                <button
-                  className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
-                  onClick={handleAddLine}
-                >
+                <button className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700" onClick={handleAddLine}>
                   + Add Line
                 </button>
                 <button
@@ -183,14 +237,12 @@ export default function JournalLinesPage() {
               </div>
             )}
 
-            {/* lines table */}
             <div className="overflow-auto border rounded-md shadow-sm">
               <table className="min-w-full table-auto border-collapse text-sm">
                 <thead className="bg-gray-200 text-left">
                   <tr>
                     <th className="border px-3 py-2">Line ID</th>
-                    <th className="border px-3 py-2">Account</th>
-                    <th className="border px-3 py-2">Description</th>
+                    <th className="border px-3 py-2">Account + FDs</th>
                     <th className="border px-3 py-2">Debit</th>
                     <th className="border px-3 py-2">Credit</th>
                     <th className="border px-3 py-2"></th>
@@ -198,37 +250,36 @@ export default function JournalLinesPage() {
                 </thead>
                 <tbody>
                   {lines.map((line, idx) => (
-                    <tr key={line.lineID || `new-${idx}`} className="border-t hover:bg-gray-50">
+                    <tr key={line.lineID || `new-${idx}`} className="border-t hover:bg-gray-50 align-top">
                       <td className="px-3 py-2 border">{line.lineID || "—"}</td>
                       <td className="px-3 py-2 border">
-                        <select
-                          disabled={journalStatus !== "draft"}
-                          className="w-full bg-transparent border rounded px-1"
-                          value={line.account}
-                          onChange={e => handleLineChange(idx, "account", e.target.value)}
-                        >
-                          <option value="">Select account</option>
-                          {mainAccounts.map(a => (
-                            <option key={a.account} value={a.account}>
-                              {a.account}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="px-3 py-2 border">
-                        <select
-                          disabled={journalStatus !== "draft"}
-                          className="w-full bg-transparent border rounded px-1"
-                          value={line.description}
-                          onChange={e => handleLineChange(idx, "description", e.target.value)}
-                        >
-                          <option value="">Select description</option>
-                          {mainAccounts.map(a => (
-                            <option key={a.description} value={a.description}>
-                              {a.description}
-                            </option>
-                          ))}
-                        </select>
+                        {journalStatus === "posted" ? (
+                          <span className="font-mono">
+                            {comboToString(line.combo, ["MA", ...FD_KEYS], "-")}
+                          </span>
+                        ) : (
+                          <AccountComboInput
+                            schema={comboSchema}
+                            value={line.combo}
+                            onChange={(next) => {
+                              setLines((ls) =>
+                                ls.map((l, i) =>
+                                  i === idx
+                                    ? {
+                                        ...l,
+                                        combo: next,
+                                        account: next.MA ?? "",
+                                        description: (next.MA && accountToDesc[next.MA]) || l.description,
+                                      }
+                                    : l
+                                )
+                              );
+                            }}
+                            onSegmentClick={(key, current) => onSegmentClick(idx, key, current)}
+                            delimiter="-"
+                            inUseByKey={fdInUseMap}
+                          />
+                        )}
                       </td>
                       <td className="px-3 py-2 border text-right">
                         <input
@@ -236,10 +287,10 @@ export default function JournalLinesPage() {
                           disabled={journalStatus !== "draft"}
                           inputMode="decimal"
                           className="w-full text-right bg-transparent border rounded px-1"
-                          value={line.debit.toFixed(2)}
-                          onChange={e => {
+                          value={(line.debit ?? 0).toFixed(2)}
+                          onChange={(e) => {
                             const v = e.target.value;
-                            if (/^\d*\.?\d{0,2}$/.test(v)) handleLineChange(idx, "debit", parseFloat(v));
+                            if (/^\d*\.?\d{0,2}$/.test(v)) handleLineChange(idx, "debit", v === "" ? 0 : parseFloat(v));
                           }}
                         />
                       </td>
@@ -249,19 +300,16 @@ export default function JournalLinesPage() {
                           disabled={journalStatus !== "draft"}
                           inputMode="decimal"
                           className="w-full text-right bg-transparent border rounded px-1"
-                          value={line.credit.toFixed(2)}
-                          onChange={e => {
+                          value={(line.credit ?? 0).toFixed(2)}
+                          onChange={(e) => {
                             const v = e.target.value;
-                            if (/^\d*\.?\d{0,2}$/.test(v)) handleLineChange(idx, "credit", parseFloat(v));
+                            if (/^\d*\.?\d{0,2}$/.test(v)) handleLineChange(idx, "credit", v === "" ? 0 : parseFloat(v));
                           }}
                         />
                       </td>
                       <td className="px-3 py-2 border text-center">
                         {journalStatus === "draft" && (
-                          <button
-                            onClick={() => handleDelete(idx)}
-                            className="text-red-500 hover:underline"
-                          >
+                          <button onClick={() => handleDelete(idx)} className="text-red-500 hover:underline">
                             Delete
                           </button>
                         )}
@@ -274,6 +322,22 @@ export default function JournalLinesPage() {
           </>
         )}
       </main>
+
+      <MainAccountPicker
+        open={maPicker.open}
+        initialValue={maPicker.idx != null ? lines[maPicker.idx].combo.MA : ""}
+        onClose={() => setMaPicker({ open: false, idx: null })}
+        onPick={handlePickMA}
+      />
+
+      <FinancialDimension
+        open={fdPicker.open}
+        keyName={fdPicker.key}
+        label={fdPicker.label}
+        initialValue={fdPicker.initial}
+        onClose={() => setFdPicker({ open: false, idx: null, key: "FD1" })}
+        onPick={handlePickFD}
+      />
     </div>
   );
 }

@@ -1,4 +1,4 @@
 from .FinancialDimensionValues import FinancialDimensionValues
 from .FinancialDimensions import FinancialDimensions
-
-__all__ = ["FinancialDimensionValues","FinancialDimensions"]
+from .MainAccounts import MainAccounts
+__all__ = ["FinancialDimensionValues","FinancialDimensions","MainAccounts"]

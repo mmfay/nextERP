@@ -13,7 +13,7 @@ import {
   postGeneralJournal,
   type GeneralJournal,
 } from "@/lib/api/generalJournals";
-import { fetchMainAccounts, type MainAccount } from "@/lib/api/mainAccounts";
+import { fetchMainAccounts } from "@/lib/api/general_ledger/mainAccounts";
 import { fetchFinancialDimensions } from "@/lib/api/financialDimensions";
 
 import AccountComboInput from "@/app/components/AccountComboInput";
@@ -27,7 +27,13 @@ const emptyCombo = (): Record<string, string> =>
   FD_KEYS.concat("MA" as const).reduce((acc, k) => ({ ...acc, [k]: "" }), {} as Record<string, string>);
 
 const comboToString = (combo: Record<string, string>, keys: string[], delimiter = "-") =>
-  keys.map((k) => (combo[k] ?? "").trim()).filter(Boolean).join(delimiter);
+  keys
+    .map((k) => (combo[k] ?? "").trim())
+    .filter(Boolean)
+    .join(delimiter);
+
+// Build FD-only string (no MA)
+const fdStringFromCombo = (combo: Record<string, string>) => comboToString(combo, [...FD_KEYS]);
 
 export default function JournalLinesPage() {
   const journalId = useSearchParams().get("id")!;
@@ -71,7 +77,7 @@ export default function JournalLinesPage() {
         if (cancelled) return;
 
         // accounts
-        const acctToDesc = Object.fromEntries(accounts.map(a => [a.account, a.description]));
+        const acctToDesc = Object.fromEntries(accounts.map((a: any) => [a.account, a.description]));
         setAccountToDesc(acctToDesc);
 
         // header/status
@@ -86,7 +92,7 @@ export default function JournalLinesPage() {
 
         // lines -> add combo seeded with MA
         setLines(
-          rawLines.map((l) => ({
+          rawLines.map((l: any) => ({
             ...l,
             description: acctToDesc[l.account] ?? l.description ?? "",
             combo: { ...emptyCombo(), MA: l.account || "" },
@@ -127,7 +133,11 @@ export default function JournalLinesPage() {
   const handleDelete = async (idx: number) => {
     const line = lines[idx];
     if (line.lineID) {
-      try { await deleteJournalLine(journalId, line.lineID); } catch (err) { console.error("Delete failed:", err); }
+      try {
+        await deleteJournalLine(journalId, line.lineID);
+      } catch (err) {
+        console.error("Delete failed:", err);
+      }
     }
     setLines((ls) => ls.filter((_, i) => i !== idx));
   };
@@ -135,21 +145,43 @@ export default function JournalLinesPage() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const payload: JournalLine[] = lines.map(({ combo, ...rest }) => {
+      // Build payload with MA + FD string(s)
+      const payload = lines.map(({ combo, ...rest }) => {
         const main = (combo.MA ?? "").trim();
-        return { ...rest, account: main, description: accountToDesc[main] ?? rest.description ?? "" };
+        const financialDimension = fdStringFromCombo(combo); // FD1..FD8 only
+        const accountCombo = comboToString(combo, ["MA", ...FD_KEYS]); // MA + FDs
+
+        // Send extra fields for backend combo creation (cast as any)
+        const out: any = {
+          ...rest,
+          account: main,
+          description: accountToDesc[main] ?? rest.description ?? "",
+          financialDimension,
+          accountCombo,
+        };
+        return out;
       });
-      const updated = await updateJournalLines(journalId, payload);
+
+      const updated = await updateJournalLines(journalId, payload as unknown as JournalLine[]);
 
       // keep combos; re-sync descs from accounts
       setLines((ls) =>
-        updated.map((u, i) => ({
+        updated.map((u: any, i: number) => ({
           ...u,
           description: accountToDesc[u.account] ?? u.description ?? "",
           combo: { ...ls[i]?.combo, MA: u.account || ls[i]?.combo?.MA || "" },
         }))
       );
-      alert("Saved successfully!");
+
+      // Show a small alert with the FD value for each line
+      const summary = payload
+        .map(
+          (p: any, i: number) =>
+            `#${i + 1} MA=${p.account || "(none)"} | FD=${p.financialDimension || "(none)"}`
+        )
+        .join("\n");
+
+      alert(`Saved successfully!\n\nFinancial Dimensions:\n${summary}`);
     } catch (err) {
       console.error("Save failed:", err);
       alert("Save failed. See console.");
@@ -185,7 +217,11 @@ export default function JournalLinesPage() {
     if (maPicker.idx == null) return;
     const desc = accountToDesc[account] ?? "";
     setLines((ls) =>
-      ls.map((l, i) => (i === maPicker.idx ? { ...l, combo: { ...l.combo, MA: account }, account, description: desc } : l))
+      ls.map((l, i) =>
+        i === maPicker.idx
+          ? { ...l, combo: { ...l.combo, MA: account }, account, description: desc }
+          : l
+      )
     );
     setMaPicker({ open: false, idx: null });
   };
@@ -203,9 +239,13 @@ export default function JournalLinesPage() {
         <div className="flex flex-col items-center space-y-2">
           <h2 className="text-2xl font-semibold">Journal Lines for {journalId}</h2>
           {journalStatus && (
-            <span className={`text-sm px-2 py-1 rounded-full font-medium ${
-              journalStatus === "draft" ? "bg-yellow-100 text-yellow-800" : "bg-green-100 text-green-800"
-            }`}>
+            <span
+              className={`text-sm px-2 py-1 rounded-full font-medium ${
+                journalStatus === "draft"
+                  ? "bg-yellow-100 text-yellow-800"
+                  : "bg-green-100 text-green-800"
+              }`}
+            >
               Status: {journalStatus}
             </span>
           )}
@@ -217,7 +257,10 @@ export default function JournalLinesPage() {
           <>
             {journalStatus === "draft" && (
               <div className="flex gap-3">
-                <button className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700" onClick={handleAddLine}>
+                <button
+                  className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+                  onClick={handleAddLine}
+                >
                   + Add Line
                 </button>
                 <button
@@ -269,7 +312,8 @@ export default function JournalLinesPage() {
                                         ...l,
                                         combo: next,
                                         account: next.MA ?? "",
-                                        description: (next.MA && accountToDesc[next.MA]) || l.description,
+                                        description:
+                                          (next.MA && accountToDesc[next.MA]) || l.description,
                                       }
                                     : l
                                 )
@@ -290,7 +334,8 @@ export default function JournalLinesPage() {
                           value={(line.debit ?? 0).toFixed(2)}
                           onChange={(e) => {
                             const v = e.target.value;
-                            if (/^\d*\.?\d{0,2}$/.test(v)) handleLineChange(idx, "debit", v === "" ? 0 : parseFloat(v));
+                            if (/^\d*\.?\d{0,2}$/.test(v))
+                              handleLineChange(idx, "debit", v === "" ? 0 : parseFloat(v));
                           }}
                         />
                       </td>
@@ -303,13 +348,17 @@ export default function JournalLinesPage() {
                           value={(line.credit ?? 0).toFixed(2)}
                           onChange={(e) => {
                             const v = e.target.value;
-                            if (/^\d*\.?\d{0,2}$/.test(v)) handleLineChange(idx, "credit", v === "" ? 0 : parseFloat(v));
+                            if (/^\d*\.?\d{0,2}$/.test(v))
+                              handleLineChange(idx, "credit", v === "" ? 0 : parseFloat(v));
                           }}
                         />
                       </td>
                       <td className="px-3 py-2 border text-center">
                         {journalStatus === "draft" && (
-                          <button onClick={() => handleDelete(idx)} className="text-red-500 hover:underline">
+                          <button
+                            onClick={() => handleDelete(idx)}
+                            className="text-red-500 hover:underline"
+                          >
                             Delete
                           </button>
                         )}

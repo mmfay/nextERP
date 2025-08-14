@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { fetchMainAccounts, MainAccount, createMainAccount, deleteMainAccounts } from "@/lib/api/mainAccounts";
+import {
+  fetchMainAccounts,
+  MainAccount,
+  createMainAccount,
+  deleteMainAccounts,
+} from "@/lib/api/general_ledger/mainAccounts";
 import { SecureButton } from "@/app/components/SecureButton";
 import { Permissions } from "@/app/config/permissions";
 
@@ -12,7 +17,12 @@ export default function MainAccountsPage() {
   const [loading, setLoading] = useState(true);
   const [selectedAccounts, setSelectedAccounts] = useState<Set<string>>(new Set());
   const [showAddModal, setShowAddModal] = useState(false);
-  const [newAccount, setNewAccount] = useState({ account: "", description: "", type: "Asset" });
+  const [newAccount, setNewAccount] = useState({
+    account: "",
+    description: "",
+    type: "Asset",
+    category: "",
+  });
 
   const selectAllRef = useRef<HTMLInputElement>(null);
 
@@ -50,13 +60,19 @@ export default function MainAccountsPage() {
   };
 
   const handleAddSubmit = async () => {
-    if (!newAccount.account || !newAccount.description || !newAccount.type) return;
+    if (
+      !newAccount.account ||
+      !newAccount.description ||
+      !newAccount.type ||
+      !newAccount.category
+    )
+      return;
 
     try {
       const created = await createMainAccount(newAccount);
       setMainAccounts((prev) => [...prev, created]);
       setShowAddModal(false);
-      setNewAccount({ account: "", description: "", type: "Asset" });
+      setNewAccount({ account: "", description: "", type: "Asset", category: "" });
     } catch (err: any) {
       alert(err.message);
     }
@@ -88,7 +104,7 @@ export default function MainAccountsPage() {
           </SecureButton>
         </section>
 
-        {/* Table or Loading Spinner */}
+        {/* Table */}
         <section>
           <h2 className="text-2xl font-semibold mb-4 text-center">Main Accounts</h2>
           {loading ? (
@@ -127,6 +143,7 @@ export default function MainAccountsPage() {
                     <th className="px-4 py-2 border-b">Account</th>
                     <th className="px-4 py-2 border-b">Description</th>
                     <th className="px-4 py-2 border-b">Type</th>
+                    <th className="px-4 py-2 border-b">Category</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -144,7 +161,7 @@ export default function MainAccountsPage() {
                           <input
                             type="checkbox"
                             checked={isSelected}
-                            onChange={() => {}}
+                            onChange={() => handleToggleSelect(acct.account)}
                             onClick={(e) => e.stopPropagation()}
                             className="form-checkbox h-4 w-4 text-blue-600"
                           />
@@ -152,6 +169,7 @@ export default function MainAccountsPage() {
                         <td className="px-4 py-2">{acct.account}</td>
                         <td className="px-4 py-2">{acct.description}</td>
                         <td className="px-4 py-2">{acct.type}</td>
+                        <td className="px-4 py-2">{acct.category ?? ""}</td>
                       </tr>
                     );
                   })}
@@ -212,6 +230,20 @@ export default function MainAccountsPage() {
                     <option key={type}>{type}</option>
                   ))}
                 </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Category
+                </label>
+                <input
+                  type="text"
+                  value={newAccount.category}
+                  onChange={(e) =>
+                    setNewAccount((prev) => ({ ...prev, category: e.target.value }))
+                  }
+                  placeholder="e.g. Current Assets"
+                  className="w-full mt-1 px-3 py-2 border rounded-md bg-white dark:bg-gray-800 dark:text-white"
+                />
               </div>
             </div>
 

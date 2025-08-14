@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { fetchMainAccounts } from "@/lib/api/mainAccounts";
+import { fetchMainAccounts } from "@/lib/api/general_ledger/mainAccounts";
 
 type Option = { value: string; label?: string };
 

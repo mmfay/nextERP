@@ -35,7 +35,7 @@ class FinancialDimensionValues:
     @staticmethod
     def create(dimension_id: int, value: CreateFinancialDimensionValue) -> bool:
         """
-        Create a new FinancialDimensionValue for the given dimension.
+        Create a new Financial Dimension Value for the given dimension.
         Returns True if created, False if a duplicate code exists in that dimension.
         """
         code = value.code.strip()

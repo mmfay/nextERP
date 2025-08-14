@@ -3,7 +3,7 @@ from datetime import datetime, date
 from uuid import uuid4
 from typing import List, Optional, Dict
 from fastapi import HTTPException, status
-from app.services.Tables import FinancialDimensionValues, FinancialDimensions
+from app.services.Tables import FinancialDimensionValues, FinancialDimensions, MainAccounts
 from app.data.general_ledger.in_memory_store import (
     _main_accounts,
     _financial_dimensions,
@@ -19,14 +19,10 @@ from app.services.sequences import get_next_id, get_next_record
 # Main Accounts
 # -----------------------------
 def get_main_accounts() -> list[MainAccount]:
-    return _main_accounts
+    return MainAccounts.findAll()
 
 def create_main_account(data: CreateMainAccount) -> MainAccount | None:
-    if any(account.account == data.account for account in _main_accounts):
-        return None  # Account already exists
-    new_account = MainAccount(**data.dict())
-    _main_accounts.append(new_account)
-    return new_account
+    return MainAccounts.create(data)
 
 def delete_main_accounts_by_id(account_ids: list[str]) -> int:
     global _main_accounts

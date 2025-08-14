@@ -13,10 +13,13 @@ class MainAccount(BaseModel):
     account: str
     description: str
     type: str
+    category: str
+    record: int
 
 class CreateMainAccount(BaseModel):
     account: constr(min_length=4, max_length=4)
     description: str
+    category: str
     type: Literal["Asset", "Liability", "Equity", "Revenue", "Expense"]
 
 class FinancialDimension(BaseModel):

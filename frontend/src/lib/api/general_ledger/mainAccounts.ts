@@ -2,6 +2,7 @@ export type MainAccount = {
   account: string;
   description: string;
   type: string;
+  category: string;
 };
 
 /**

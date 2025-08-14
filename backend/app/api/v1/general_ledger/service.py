@@ -3,6 +3,7 @@ from datetime import datetime, date
 from uuid import uuid4
 from typing import List, Optional, Dict
 from fastapi import HTTPException, status
+from app.services.Tables import FinancialDimensionValues, FinancialDimensions
 from app.data.general_ledger.in_memory_store import (
     _main_accounts,
     _financial_dimensions,
@@ -37,46 +38,22 @@ def delete_main_accounts_by_id(account_ids: list[str]) -> int:
 # Financial Dimensions
 # -----------------------------
 def get_financial_dimensions() -> list[FinancialDimension]:
-    return _financial_dimensions
+    return FinancialDimensions.findAll()
 
 def update_financial_dimension(data: UpdateFinancialDimension) -> FinancialDimension | None:
-    for i, dim in enumerate(_financial_dimensions):
-        if dim.id == data.id:
-            _financial_dimensions[i] = FinancialDimension(**data.dict())
-            return _financial_dimensions[i]
-    return None
+    return FinancialDimensions.update(data)
 
 # -----------------------------
 # Dimension Values
 # -----------------------------
-
 def get_financial_dimension_values(dimension_id: int) -> list[FinancialDimensionValue]:
-    filtered = [
-        dv for dv in _financial_dimension_values
-        if dv.dimension == dimension_id
-    ]
-    return filtered
+    return FinancialDimensionValues.findByDimension(dimension_id)
 
 def add_dimension_value(dimension_id: int, value: CreateFinancialDimensionValue) -> bool:
-    newEntry = FinancialDimensionValue(
-        code            = value.code,
-        description     = value.description,
-        dimension       = dimension_id,
-        record          = get_next_record("FDV")
-    )
-    if any(v.code == value.code for v in _financial_dimension_values):
-        return False  # duplicate code
-    _financial_dimension_values.append(newEntry)
-    return True
+    return FinancialDimensionValues.create(dimension_id, value)
 
 def delete_dimension_value(dimension_id: int, code: str) -> bool:
-    global _financial_dimension_values
-    before_count = len(_financial_dimension_values)
-    _financial_dimension_values = [
-        v for v in _financial_dimension_values
-        if not (v.dimension == dimension_id and v.code == code)
-    ]
-    return len(_financial_dimension_values) < before_count
+    return FinancialDimensionValues.delete(dimension_id, code)
 
 # -----------------------------
 # Account Combinations
@@ -180,6 +157,7 @@ def upsert_journal_lines(journal_id: str, incoming: List[JournalLine]) -> List[J
      - insert any with no lineID (assign next integer)
      - delete any existing lines not present in incoming
     """
+    print(incoming)
     # 1) grab existing lines
     existing = _journal_lines.get(journal_id, [])
 

@@ -14,6 +14,7 @@ class MainAccount(BaseModel):
     description: str
     type: str
     category: str
+    company: int
     record: int
 
 class CreateMainAccount(BaseModel):

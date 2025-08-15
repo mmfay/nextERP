@@ -3,7 +3,8 @@ from datetime import datetime, date
 from uuid import uuid4
 from typing import List, Optional, Dict
 from fastapi import HTTPException, status
-from app.services.Tables import FinancialDimensionValues, FinancialDimensions, MainAccounts
+from app.services.Tables import FinancialDimensionValues, FinancialDimensions, MainAccounts, GeneralJournalHeader
+from app.classes import GeneralJournals
 from app.data.general_ledger.in_memory_store import (
     _main_accounts,
     _financial_dimensions,
@@ -25,10 +26,7 @@ def create_main_account(data: CreateMainAccount) -> MainAccount | None:
     return MainAccounts.create(data)
 
 def delete_main_accounts_by_id(account_ids: list[str]) -> int:
-    global _main_accounts
-    original_len = len(_main_accounts)
-    _main_accounts = [acct for acct in _main_accounts if acct.account not in account_ids]
-    return original_len - len(_main_accounts)
+    return MainAccounts.deleteAccounts(account_ids)
 
 # -----------------------------
 # Financial Dimensions
@@ -108,37 +106,14 @@ def get_trial_balance(
 # General Journals
 # -----------------------------
 def get_general_journals() -> list[GeneralJournal]:
-    return _general_journal_header
+    return GeneralJournalHeader.findAll()
 
 def get_general_journal_by_id(journal_id: str) -> Optional[GeneralJournal]:
-    for journal in _general_journal_header:
-        if journal.journalID == journal_id:
-            return journal
-    return None
+    return GeneralJournalHeader.findByJournalID(journal_id)
 
 def validate_post_journal(journal_id: str) -> GeneralJournal:
-    # get journal lines
-    lines = _journal_lines.get(journal_id)
-
-    # 2) sum debits & credits
-    total_debits = sum(line.debit for line in lines)
-    total_credits = sum(line.credit for line in lines)
-
-    # 3) reject if unbalanced
-    if total_debits != total_credits:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=(
-                f"Cannot post unbalanced journal {journal_id}: "
-                f"debits={total_debits} ≠ credits={total_credits}"
-            )
-        )
-
-    journal = get_general_journal_by_id(journal_id)
-    journal.status = "posted"
-    # 4) all good → construct & return your posted journal
-    #    (you could also flip a status flag in a header store if you have one)
-    return journal
+    # validate and post journal
+    return GeneralJournalHeader.postJournal(journal_id)
 
 # -----------------------------
 # General Journals Lines

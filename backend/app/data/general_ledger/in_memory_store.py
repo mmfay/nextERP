@@ -18,11 +18,11 @@ from uuid import uuid4
 
 # In-memory store (can be replaced with DB later)
 _main_accounts: list[MainAccount] = [
-    MainAccount(account="1000", description="Cash", type="Asset", category="COGS", record=1),
-    MainAccount(account="2000", description="Accounts Payable", type="Liability", category="INV", record=2),
-    MainAccount(account="3000", description="Retained Earnings", type="Equity", category="INV", record=3),
-    MainAccount(account="4000", description="Sales Revenue", type="Revenue", category="COGS", record=4),
-    MainAccount(account="5000", description="Cost of Goods Sold", type="Expense", category="COGS", record=5),
+    MainAccount(account="1000", description="Cash", type="Asset", category="COGS", company=1, record=1),
+    MainAccount(account="2000", description="Accounts Payable", type="Liability", category="INV", company=1, record=2),
+    MainAccount(account="3000", description="Retained Earnings", type="Equity", category="INV", company=1, record=3),
+    MainAccount(account="4000", description="Sales Revenue", type="Revenue", category="COGS", company=1, record=4),
+    MainAccount(account="5000", description="Cost of Goods Sold", type="Expense", category="COGS", company=1, record=5),
 ]
 
 _financial_dimensions: list[FinancialDimension] = [

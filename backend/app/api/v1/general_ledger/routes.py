@@ -27,7 +27,7 @@ def add_main_account(account: CreateMainAccount):
 @router.delete("/main_accounts")
 def delete_main_accounts(accounts: list[str]):
     deleted = delete_main_accounts_by_id(accounts)
-    if deleted == 0:
+    if not deleted:
         raise HTTPException(status_code=404, detail="No accounts deleted")
     return {"deleted": deleted}
 
@@ -99,12 +99,6 @@ def get_general_journal(journal_id: str):
 
 @router.patch("/general_journals/{journal_id}", response_model=GeneralJournal)
 def post_journal(journal_id: str):
-    journal = get_general_journal_by_id(journal_id)
-    if journal is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Journal {journal_id} not found"
-        )
     return validate_post_journal(journal_id)
 
 # -----------------------------

@@ -30,8 +30,16 @@ class MainAccounts:
             account         = data.account, 
             description     = data.description, 
             type            = data.type,
+            category        = data.category,
             record          = get_next_record("MA")
         )
         
         _main_accounts.append(new_entry)
         return new_entry
+    
+    @staticmethod
+    def deleteAccounts(account_ids: list[str]) -> int:
+        global _main_accounts
+        original_len = len(_main_accounts)
+        _main_accounts = [acct for acct in _main_accounts if acct.account not in account_ids]
+        return original_len - len(_main_accounts)

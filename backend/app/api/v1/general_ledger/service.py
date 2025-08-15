@@ -3,7 +3,7 @@ from datetime import datetime, date
 from uuid import uuid4
 from typing import List, Optional, Dict
 from fastapi import HTTPException, status
-from app.services.Tables import FinancialDimensionValues, FinancialDimensions, MainAccounts, GeneralJournalHeader
+from app.services.Tables import FinancialDimensionValues, FinancialDimensions, MainAccounts, GeneralJournalHeader, GeneralJournalLines
 from app.classes import GeneralJournals
 from app.data.general_ledger.in_memory_store import (
     _main_accounts,
@@ -115,88 +115,24 @@ def validate_post_journal(journal_id: str) -> GeneralJournal:
     # validate and post journal
     return GeneralJournalHeader.postJournal(journal_id)
 
+def create_general_journal(data: CreateGeneralJournal) -> GeneralJournal:
+    return GeneralJournalHeader.create(data)
+
 # -----------------------------
 # General Journals Lines
 # -----------------------------
 def get_general_journal_lines(journal_id: str) -> list[JournalLine]:
-    return _journal_lines.get(journal_id, [])
+    return GeneralJournalLines.findByJournalID(journal_id)
 
 def upsert_journal_lines(journal_id: str, incoming: List[JournalLine]) -> List[JournalLine]:
-    """
-    Replace the stored lines for `journal_id` with the diff of `incoming`:
-     - update any matching lineID
-     - insert any with no lineID (assign next integer)
-     - delete any existing lines not present in incoming
-    """
-    print(incoming)
-    # 1) grab existing lines
-    existing = _journal_lines.get(journal_id, [])
-
-    # 2) index existing by ID, but parse them as ints for ordering
-    by_id: Dict[str, JournalLine] = {l.lineID: l for l in existing if l.lineID}
-    existing_ids = [int(l.lineID) for l in existing if l.lineID.isdigit()]
-    next_id = max(existing_ids, default=0) + 1
-
-    # 3) build the new set
-    updated_by_id: Dict[str, JournalLine] = {}
-    for line in incoming:
-        if line.lineID and line.lineID in by_id:
-            # update in place
-            stored = by_id[line.lineID]
-            stored.account     = line.account
-            stored.description = line.description
-            stored.debit       = line.debit
-            stored.credit      = line.credit
-            updated_by_id[line.lineID] = stored
-        else:
-            # new line → assign next integer ID
-            new_id = str(next_id)
-            next_id += 1
-            new_line = JournalLine(
-                lineID=new_id,
-                journalID=journal_id,
-                account=line.account,
-                description=line.description,
-                debit=line.debit,
-                credit=line.credit,
-            )
-            updated_by_id[new_id] = new_line
-    # 4) replace the in‐memory store
-    _journal_lines[journal_id] = list(updated_by_id.values())
-    return _journal_lines[journal_id]
-
+    return GeneralJournalLines.upsert(journal_id, incoming)
 
 def delete_journal_line(journal_id: str, line_id: str) -> bool:
-    
-    lines = _journal_lines.get(journal_id, [])
-    filtered = [l for l in lines if l.lineID != line_id]
-    if len(filtered) < len(lines):
-        _journal_lines[journal_id] = filtered
-        return True
-    return False
+    return GeneralJournalLines.delete(journal_id, line_id)
 
-def create_general_journal(data: CreateGeneralJournal) -> GeneralJournal:
-    """
-    Create a new GeneralJournal, assign it a generated ID and initial status 'draft',
-    append it to the in-memory header list, and return it.
-    """
-    # 1) generate a new sequential ID, e.g. "GJ-000001"
-    new_id = get_sequence_gen_jour()
-
-    # 2) build the model
-    journal = GeneralJournal(
-        journalID=new_id,
-        document_date=data.document_date,
-        type=data.type,
-        description=data.description,
-        status="draft",
-    )
-
-    # 3) persist to our in-memory list
-    _general_journal_header.append(journal)
-
-    # 4) return the newly created journal
-    return journal
+# -----------------------------
+# Posting Setup
+# -----------------------------
 
 def get_posting_setup():
     return _posting_setup
@@ -211,7 +147,4 @@ def update_posting_setup(updates: List[PostingSetup]) -> List[PostingSetup]:
             _posting_setup[idx] = updates_by_type[existing.type]
 
     return _posting_setup
-
-def get_sequence_gen_jour():
-    return get_next_id("GJ")
     

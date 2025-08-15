@@ -116,11 +116,11 @@ export default function MainAccountsPage() {
               />
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full border border-gray-300 dark:border-gray-700 text-left">
-                <thead className="bg-gray-200 dark:bg-gray-800 text-gray-900 dark:text-white">
+            <div className="overflow-x-auto rounded-lg border border-black/20 shadow-sm">
+              <table className="min-w-full text-left">
+                <thead className="bg-gray-200 dark:bg-gray-800 text-gray-900 dark:text-white rounded-t-lg">
                   <tr>
-                    <th className="px-4 py-2 border-b">
+                    <th className="px-4 py-2 border-b first:rounded-tl-lg">
                       <input
                         ref={selectAllRef}
                         type="checkbox"
@@ -143,7 +143,7 @@ export default function MainAccountsPage() {
                     <th className="px-4 py-2 border-b">Account</th>
                     <th className="px-4 py-2 border-b">Description</th>
                     <th className="px-4 py-2 border-b">Type</th>
-                    <th className="px-4 py-2 border-b">Category</th>
+                    <th className="px-4 py-2 border-b last:rounded-tr-lg">Category</th>
                   </tr>
                 </thead>
                 <tbody>

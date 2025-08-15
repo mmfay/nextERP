@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   fetchJournalLines,
   updateJournalLines,
@@ -48,6 +48,10 @@ export default function JournalLinesPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [posting, setPosting] = useState(false);
+
+  // selection state (checkboxes)
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const selectAllRef = useRef<HTMLInputElement>(null);
 
   const [maPicker, setMaPicker] = useState<{ open: boolean; idx: number | null }>({ open: false, idx: null });
   const [fdPicker, setFdPicker] = useState<{ open: boolean; idx: number | null; key: string; label?: string; initial?: string }>({
@@ -98,6 +102,7 @@ export default function JournalLinesPage() {
             combo: { ...emptyCombo(), MA: l.account || "" },
           }))
         );
+        setSelected(new Set()); // clear selection on load
       } catch (e) {
         console.error(e);
       } finally {
@@ -108,6 +113,14 @@ export default function JournalLinesPage() {
       cancelled = true;
     };
   }, [journalId]);
+
+  // Keep "Select All" checkbox indeterminate state in sync
+  useEffect(() => {
+    if (!selectAllRef.current) return;
+    const total = lines.length;
+    const count = selected.size;
+    selectAllRef.current.indeterminate = count > 0 && count < total;
+  }, [selected, lines.length]);
 
   // Helpers
   const updateLine = (idx: number, patch: Partial<UILine>) =>
@@ -130,6 +143,24 @@ export default function JournalLinesPage() {
       },
     ]);
 
+  const rowKey = (line: UILine, idx: number) => line.lineID || `new-${idx}`;
+
+  const toggleRow = (key: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    if (selected.size === lines.length) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(lines.map((l, i) => rowKey(l, i))));
+    }
+  };
+
   const handleDelete = async (idx: number) => {
     const line = lines[idx];
     if (line.lineID) {
@@ -140,6 +171,30 @@ export default function JournalLinesPage() {
       }
     }
     setLines((ls) => ls.filter((_, i) => i !== idx));
+    setSelected((sel) => {
+      const next = new Set(sel);
+      next.delete(rowKey(line, idx));
+      return next;
+    });
+  };
+
+  const handleDeleteSelected = async () => {
+    if (!selected.size) return;
+    const toDelete = lines
+      .map((l, i) => ({ l, i, key: rowKey(l, i) }))
+      .filter(({ key }) => selected.has(key));
+
+    // delete existing lines on the backend
+    const existingIds = toDelete.map(({ l }) => l.lineID).filter(Boolean) as string[];
+    try {
+      await Promise.allSettled(existingIds.map((id) => deleteJournalLine(journalId, id)));
+    } catch (e) {
+      console.error("Bulk delete error:", e);
+    }
+
+    // update UI
+    setLines((ls) => ls.filter((_, i) => !toDelete.some((x) => x.i === i)));
+    setSelected(new Set());
   };
 
   const handleSave = async () => {
@@ -173,7 +228,7 @@ export default function JournalLinesPage() {
         }))
       );
 
-      // Show a small alert with the FD value for each line
+      // optional summary
       const summary = payload
         .map(
           (p: any, i: number) =>
@@ -256,7 +311,7 @@ export default function JournalLinesPage() {
         ) : (
           <>
             {journalStatus === "draft" && (
-              <div className="flex gap-3">
+              <div className="flex flex-wrap gap-3">
                 <button
                   className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
                   onClick={handleAddLine}
@@ -277,94 +332,141 @@ export default function JournalLinesPage() {
                 >
                   {posting ? "Posting…" : "Post Journal"}
                 </button>
+                <button
+                  className={`px-4 py-2 rounded transition ${
+                    selected.size === 0
+                      ? "bg-red-400 cursor-not-allowed text-white"
+                      : "bg-red-600 hover:bg-red-700 text-white"
+                  }`}
+                  onClick={handleDeleteSelected}
+                  disabled={selected.size === 0}
+                >
+                  Delete Selected
+                </button>
               </div>
             )}
 
-            <div className="overflow-auto border rounded-md shadow-sm">
-              <table className="min-w-full table-auto border-collapse text-sm">
-                <thead className="bg-gray-200 text-left">
+            {/* Styled table container */}
+            <div className="overflow-auto rounded-lg border border-black/20 shadow-sm">
+              <table className="min-w-full table-auto text-sm">
+                <thead className="bg-gray-200 dark:bg-gray-800 text-left text-gray-900 dark:text-white rounded-t-lg">
                   <tr>
-                    <th className="border px-3 py-2">Line ID</th>
-                    <th className="border px-3 py-2">Account + FDs</th>
-                    <th className="border px-3 py-2">Debit</th>
-                    <th className="border px-3 py-2">Credit</th>
-                    <th className="border px-3 py-2"></th>
+                    <th className="px-3 py-2 border-b first:rounded-tl-lg">
+                      <input
+                        ref={selectAllRef}
+                        type="checkbox"
+                        checked={selected.size > 0 && selected.size === lines.length}
+                        onChange={toggleAll}
+                        className="form-checkbox h-4 w-4 text-blue-600"
+                        disabled={lines.length === 0 || journalStatus === "posted"}
+                      />
+                    </th>
+                    <th className="border-b px-3 py-2">Line ID</th>
+                    <th className="border-b px-3 py-2">Account + FDs</th>
+                    <th className="border-b px-3 py-2">Debit</th>
+                    <th className="border-b px-3 py-2">Credit</th>
+                    <th className="border-b px-3 py-2 last:rounded-tr-lg"></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {lines.map((line, idx) => (
-                    <tr key={line.lineID || `new-${idx}`} className="border-t hover:bg-gray-50 align-top">
-                      <td className="px-3 py-2 border">{line.lineID || "—"}</td>
-                      <td className="px-3 py-2 border">
-                        {journalStatus === "posted" ? (
-                          <span className="font-mono">
-                            {comboToString(line.combo, ["MA", ...FD_KEYS], "-")}
-                          </span>
-                        ) : (
-                          <AccountComboInput
-                            schema={comboSchema}
-                            value={line.combo}
-                            onChange={(next) => {
-                              setLines((ls) =>
-                                ls.map((l, i) =>
-                                  i === idx
-                                    ? {
-                                        ...l,
-                                        combo: next,
-                                        account: next.MA ?? "",
-                                        description:
-                                          (next.MA && accountToDesc[next.MA]) || l.description,
-                                      }
-                                    : l
-                                )
-                              );
-                            }}
-                            onSegmentClick={(key, current) => onSegmentClick(idx, key, current)}
-                            delimiter="-"
-                            inUseByKey={fdInUseMap}
+                  {lines.map((line, idx) => {
+                    const key = rowKey(line, idx);
+                    const isSelected = selected.has(key);
+                    return (
+                      <tr
+                        key={key}
+                        onClick={() => journalStatus === "draft" && toggleRow(key)}
+                        className={`border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900 align-top ${
+                          isSelected ? "bg-blue-50 dark:bg-blue-900/40" : ""
+                        } ${journalStatus === "draft" ? "cursor-pointer" : ""}`}
+                      >
+                        <td className="px-3 py-2">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleRow(key)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="form-checkbox h-4 w-4 text-blue-600"
+                            disabled={journalStatus !== "draft"}
                           />
-                        )}
-                      </td>
-                      <td className="px-3 py-2 border text-right">
-                        <input
-                          type="text"
-                          disabled={journalStatus !== "draft"}
-                          inputMode="decimal"
-                          className="w-full text-right bg-transparent border rounded px-1"
-                          value={(line.debit ?? 0).toFixed(2)}
-                          onChange={(e) => {
-                            const v = e.target.value;
-                            if (/^\d*\.?\d{0,2}$/.test(v))
-                              handleLineChange(idx, "debit", v === "" ? 0 : parseFloat(v));
-                          }}
-                        />
-                      </td>
-                      <td className="px-3 py-2 border text-right">
-                        <input
-                          type="text"
-                          disabled={journalStatus !== "draft"}
-                          inputMode="decimal"
-                          className="w-full text-right bg-transparent border rounded px-1"
-                          value={(line.credit ?? 0).toFixed(2)}
-                          onChange={(e) => {
-                            const v = e.target.value;
-                            if (/^\d*\.?\d{0,2}$/.test(v))
-                              handleLineChange(idx, "credit", v === "" ? 0 : parseFloat(v));
-                          }}
-                        />
-                      </td>
-                      <td className="px-3 py-2 border text-center">
-                        {journalStatus === "draft" && (
-                          <button
-                            onClick={() => handleDelete(idx)}
-                            className="text-red-500 hover:underline"
-                          >
-                            Delete
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="px-3 py-2 border">{line.lineID || "—"}</td>
+                        <td className="px-3 py-2 border">
+                          {journalStatus === "posted" ? (
+                            <span className="font-mono">
+                              {comboToString(line.combo, ["MA", ...FD_KEYS], "-")}
+                            </span>
+                          ) : (
+                            <AccountComboInput
+                              schema={comboSchema}
+                              value={line.combo}
+                              onChange={(next) => {
+                                setLines((ls) =>
+                                  ls.map((l, i) =>
+                                    i === idx
+                                      ? {
+                                          ...l,
+                                          combo: next,
+                                          account: next.MA ?? "",
+                                          description:
+                                            (next.MA && accountToDesc[next.MA]) || l.description,
+                                        }
+                                      : l
+                                  )
+                                );
+                              }}
+                              onSegmentClick={(key, current) => onSegmentClick(idx, key, current)}
+                              delimiter="-"
+                              inUseByKey={fdInUseMap}
+                            />
+                          )}
+                        </td>
+                        <td className="px-3 py-2 border text-right">
+                          <input
+                            type="text"
+                            disabled={journalStatus !== "draft"}
+                            inputMode="decimal"
+                            className="w-full text-right bg-transparent border rounded px-1"
+                            value={(line.debit ?? 0).toFixed(2)}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              if (/^\d*\.?\d{0,2}$/.test(v))
+                                handleLineChange(idx, "debit", v === "" ? 0 : parseFloat(v));
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </td>
+                        <td className="px-3 py-2 border text-right">
+                          <input
+                            type="text"
+                            disabled={journalStatus !== "draft"}
+                            inputMode="decimal"
+                            className="w-full text-right bg-transparent border rounded px-1"
+                            value={(line.credit ?? 0).toFixed(2)}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              if (/^\d*\.?\d{0,2}$/.test(v))
+                                handleLineChange(idx, "credit", v === "" ? 0 : parseFloat(v));
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </td>
+                        <td className="px-3 py-2 border text-center">
+                          {journalStatus === "draft" && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDelete(idx);
+                              }}
+                              className="text-red-500 hover:underline"
+                            >
+                              Delete
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

@@ -22,6 +22,10 @@ export default function GeneralJournalPage() {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
 
+  // selection state (checkboxes)
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const selectAllRef = useRef<HTMLInputElement>(null);
+
   // modal + form state
   const modalRef = useRef<HTMLDialogElement>(null);
   const [newType, setNewType] = useState("");
@@ -30,6 +34,13 @@ export default function GeneralJournalPage() {
   useEffect(() => {
     loadJournals();
   }, []);
+
+  useEffect(() => {
+    if (!selectAllRef.current) return;
+    const total = journals.length;
+    const count = selected.size;
+    selectAllRef.current.indeterminate = count > 0 && count < total;
+  }, [selected, journals]);
 
   async function loadJournals() {
     setLoading(true);
@@ -53,15 +64,13 @@ export default function GeneralJournalPage() {
 
   function openModal() {
     if (!modalRef.current) return;
-    // reset fields each open
     setNewType("");
     setNewDesc("");
     modalRef.current.showModal();
   }
 
   function closeModal() {
-    if (!modalRef.current) return;
-    modalRef.current.close();
+    modalRef.current?.close();
   }
 
   async function handleCreate(e?: React.FormEvent) {
@@ -91,7 +100,6 @@ export default function GeneralJournalPage() {
         ...js,
       ]);
 
-      // reset + close
       setNewType("");
       setNewDesc("");
       closeModal();
@@ -103,18 +111,33 @@ export default function GeneralJournalPage() {
     }
   }
 
-  // close when clicking backdrop
+  // backdrop click to close
   function handleDialogClick(e: React.MouseEvent<HTMLDialogElement>) {
     const dialog = modalRef.current;
     if (!dialog) return;
     const rect = dialog.getBoundingClientRect();
-    const clickedInDialog =
+    const inside =
       e.clientX >= rect.left &&
       e.clientX <= rect.right &&
       e.clientY >= rect.top &&
       e.clientY <= rect.bottom;
+    if (!inside && !creating) closeModal();
+  }
 
-    if (!clickedInDialog && !creating) closeModal();
+  function toggleRow(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
+  function toggleAll() {
+    if (selected.size === journals.length) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(journals.map((j) => j.id)));
+    }
   }
 
   return (
@@ -135,46 +158,72 @@ export default function GeneralJournalPage() {
             Loading...
           </div>
         ) : (
-          <div className="overflow-auto border rounded-md shadow-sm">
-            <table className="min-w-full table-auto border-collapse text-sm">
-              <thead className="bg-gray-200 dark:bg-gray-800 text-left">
+          <div className="overflow-auto rounded-lg border border-black/20 shadow-sm">
+            <table className="min-w-full table-auto text-sm">
+              <thead className="bg-gray-200 dark:bg-gray-800 text-left text-gray-900 dark:text-white rounded-t-lg">
                 <tr>
-                  <th className="border px-3 py-2">Journal ID</th>
-                  <th className="border px-3 py-2">Date</th>
-                  <th className="border px-3 py-2">Type</th>
-                  <th className="border px-3 py-2">Description</th>
-                  <th className="border px-3 py-2">Status</th>
+                  <th className="px-3 py-2 border-b first:rounded-tl-lg">
+                    <input
+                      ref={selectAllRef}
+                      type="checkbox"
+                      checked={selected.size > 0 && selected.size === journals.length}
+                      onChange={toggleAll}
+                      className="form-checkbox h-4 w-4 text-blue-600"
+                    />
+                  </th>
+                  <th className="border-b px-3 py-2">Journal ID</th>
+                  <th className="border-b px-3 py-2">Date</th>
+                  <th className="border-b px-3 py-2">Type</th>
+                  <th className="border-b px-3 py-2">Description</th>
+                  <th className="border-b px-3 py-2 last:rounded-tr-lg">Status</th>
                 </tr>
               </thead>
               <tbody>
-                {journals.map((j, index) => (
-                  <tr
-                    key={j.id ?? `row-${index}`}
-                    className="border-t hover:bg-gray-50 dark:hover:bg-gray-900"
-                  >
-                    <td className="px-3 py-2 border text-blue-600 hover:underline">
-                      <Link
-                        href={`/general_ledger/general_journal/journal_lines?id=${j.id}`}
-                      >
-                        {j.id}
-                      </Link>
-                    </td>
-                    <td className="px-3 py-2 border">{j.journal_date}</td>
-                    <td className="px-3 py-2 border">{j.type}</td>
-                    <td className="px-3 py-2 border">{j.description}</td>
-                    <td className="px-3 py-2 border">
-                      <span
-                        className={`inline-block px-2 py-1 rounded text-xs ${
-                          j.status === "posted"
-                            ? "bg-green-200 text-green-800"
-                            : "bg-yellow-200 text-yellow-800"
-                        }`}
-                      >
-                        {j.status.toUpperCase()}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                {journals.map((j, index) => {
+                  const isSelected = selected.has(j.id);
+                  return (
+                    <tr
+                      key={j.id ?? `row-${index}`}
+                      onClick={() => toggleRow(j.id)}
+                      className={`border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900 cursor-pointer ${
+                        isSelected ? "bg-blue-50 dark:bg-blue-900/40" : ""
+                      }`}
+                    >
+                      <td className="px-3 py-2">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleRow(j.id)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="form-checkbox h-4 w-4 text-blue-600"
+                        />
+                      </td>
+                      <td className="px-3 py-2 border">
+                        <Link
+                          href={`/general_ledger/general_journal/journal_lines?id=${j.id}`}
+                          className="text-blue-600 hover:underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {j.id}
+                        </Link>
+                      </td>
+                      <td className="px-3 py-2 border">{j.journal_date}</td>
+                      <td className="px-3 py-2 border">{j.type}</td>
+                      <td className="px-3 py-2 border">{j.description}</td>
+                      <td className="px-3 py-2 border">
+                        <span
+                          className={`inline-block px-2 py-1 rounded text-xs ${
+                            j.status === "posted"
+                              ? "bg-green-200 text-green-800"
+                              : "bg-yellow-200 text-yellow-800"
+                          }`}
+                        >
+                          {j.status.toUpperCase()}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

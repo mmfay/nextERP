@@ -64,25 +64,61 @@ class GeneralJournalHeader:
     
     @staticmethod
     def findByJournalID(journal_id: str) -> Optional[GeneralJournal]:
-        for journal in _general_journal_header:
-            if journal.journalID == journal_id:
-                return journal
-        return None
+        """
+        Fetch a single General Journal header by its journal_id.
+        Queries the database instead of in-memory store.
+        """
+        sql = """
+            SELECT
+                journal_id   AS "journalID",
+                document_date,
+                type,
+                description,
+                status
+            FROM GENERALJOURNALHEADER
+            WHERE journal_id = %s;
+        """
+        row = DB.fetch_one(sql, (journal_id,))
+
+        if not row:
+            return None
+
+        return GeneralJournal(**row)
     
     @staticmethod
     def postJournal(journal_id: str) -> GeneralJournal:
-        print(journal_id)
-        journal = GeneralJournalHeader.findByJournalID(journal_id)
+        """
+        Validate and post a General Journal by updating its status in the DB.
+        Returns the updated journal row as a GeneralJournal model.
+        """
 
-        if journal is None: 
+        # 1) Ensure the journal exists (and load current values)
+        journal = GeneralJournalHeader.findByJournalID(journal_id)
+        if journal is None:
             Error.not_found("Journal not found", journal_id)
 
-        # validate posting
-        GeneralJournals.validate(journal.journalID)
+        # 2) Validate (your domain validation)
+        GeneralJournals.validate(journal_id)
 
-        journal.status = "posted"
+        # 3) Update status in DB and return updated row
+        sql = """
+            UPDATE GENERALJOURNALHEADER
+               SET status = %s
+             WHERE journal_id = %s
+            RETURNING
+                journal_id   AS "journalID",
+                document_date,
+                type,
+                description,
+                status;
+        """
+        row = DB.fetch_one(sql, ("posted", journal_id))
 
-        return journal
+        if not row:
+            # No row returned/updated — defensive guard
+            Error.not_found("Journal not found or could not be updated", journal_id)
+
+        return GeneralJournal(**row)
     
     @staticmethod
     def create(data: CreateGeneralJournal) -> GeneralJournal:

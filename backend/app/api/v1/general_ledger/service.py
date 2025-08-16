@@ -1,7 +1,7 @@
 from .schemas import *
 from datetime import datetime, date
 from uuid import uuid4
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
 from fastapi import HTTPException, status
 from app.services.Tables import FinancialDimensionValues, FinancialDimensions, MainAccounts, GeneralJournalHeader, GeneralJournalLines
 from app.classes import GeneralJournals
@@ -105,8 +105,8 @@ def get_trial_balance(
 # -----------------------------
 # General Journals
 # -----------------------------
-def get_general_journals() -> list[GeneralJournal]:
-    return GeneralJournalHeader.findAll()
+def get_general_journals(*, limit: int, next_cursor: Optional[str], prev_cursor: Optional[str]) -> Dict[str, Any]:
+    return GeneralJournalHeader.get_page(limit=limit, next_cursor=next_cursor, prev_cursor=prev_cursor)
 
 def get_general_journal_by_id(journal_id: str) -> Optional[GeneralJournal]:
     return GeneralJournalHeader.findByJournalID(journal_id)

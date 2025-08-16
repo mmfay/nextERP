@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
-  fetchGeneralJournals,
+  fetchGeneralJournalsPage,
   createGeneralJournal,
 } from "@/lib/api/generalJournals";
 
@@ -17,12 +17,28 @@ type JournalHeader = {
   status: JournalStatus;
 };
 
+type PageEnvelope = {
+  items: any[];
+  has_next: boolean;
+  has_prev: boolean;
+  next_cursor?: string | null;
+  prev_cursor?: string | null;
+  limit: number;
+};
+
+const PAGE_SIZE = 50;
+
 export default function GeneralJournalPage() {
-  const [journals, setJournals] = useState<JournalHeader[]>([]);
+  // page cache: one chunk per page index
+  const [pages, setPages] = useState<JournalHeader[][]>([]);
+  const [pageNextCursors, setPageNextCursors] = useState<(string | null)[]>([]);
+  const [pageHasNext, setPageHasNext] = useState<boolean[]>([]);
+  const [currentIdx, setCurrentIdx] = useState(0);
+
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
 
-  // selection state (checkboxes)
+  // selection state (checkboxes) for current page only
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const selectAllRef = useRef<HTMLInputElement>(null);
 
@@ -31,35 +47,88 @@ export default function GeneralJournalPage() {
   const [newType, setNewType] = useState("");
   const [newDesc, setNewDesc] = useState("");
 
+  const currentPage = pages[currentIdx] ?? [];
+  const hasPrev = currentIdx > 0;
+  const hasNext = pageHasNext[currentIdx] ?? false;
+  const nextCursor = pageNextCursors[currentIdx] ?? null;
+
   useEffect(() => {
-    loadJournals();
+    loadFirstPage();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // indeterminate checkbox
   useEffect(() => {
     if (!selectAllRef.current) return;
-    const total = journals.length;
+    const total = currentPage.length;
     const count = selected.size;
     selectAllRef.current.indeterminate = count > 0 && count < total;
-  }, [selected, journals]);
+  }, [selected, currentPage]);
 
-  async function loadJournals() {
+  async function loadFirstPage() {
     setLoading(true);
     try {
-      const data = await fetchGeneralJournals();
-      setJournals(
-        data.map((j: any) => ({
-          id: j.journalID,
-          journal_date: j.document_date,
-          type: j.type,
-          description: j.description,
-          status: j.status as JournalStatus,
-        }))
-      );
+      const page = (await fetchGeneralJournalsPage({
+        limit: PAGE_SIZE,
+      })) as unknown as PageEnvelope;
+
+      const mapped = page.items.map((j: any) => ({
+        id: j.journalID,
+        journal_date: j.document_date,
+        type: j.type,
+        description: j.description,
+        status: j.status as JournalStatus,
+      }));
+
+      setPages([mapped]);
+      setPageNextCursors([page.next_cursor ?? null]);
+      setPageHasNext([page.has_next]);
+      setCurrentIdx(0);
+      setSelected(new Set());
     } catch (error) {
       console.error("Failed to fetch journals:", error);
     } finally {
       setLoading(false);
     }
+  }
+
+  async function loadNext() {
+    if (loading || !hasNext || !nextCursor) return;
+    setLoading(true);
+    try {
+      const page = (await fetchGeneralJournalsPage({
+        limit: PAGE_SIZE,
+        next_cursor: nextCursor,
+      })) as unknown as PageEnvelope;
+
+      const mapped = page.items.map((j: any) => ({
+        id: j.journalID,
+        journal_date: j.document_date,
+        type: j.type,
+        description: j.description,
+        status: j.status as JournalStatus,
+      }));
+
+      setPages((prev) => [...prev.slice(0, currentIdx + 1), mapped]);
+      setPageNextCursors((prev) => [
+        ...prev.slice(0, currentIdx + 1),
+        page.next_cursor ?? null,
+      ]);
+      setPageHasNext((prev) => [...prev.slice(0, currentIdx + 1), page.has_next]);
+
+      setCurrentIdx((i) => i + 1);
+      setSelected(new Set());
+    } catch (error) {
+      console.error("Failed to load next page:", error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function loadPrev() {
+    if (!hasPrev) return;
+    setCurrentIdx((i) => Math.max(0, i - 1));
+    setSelected(new Set());
   }
 
   function openModal() {
@@ -89,16 +158,23 @@ export default function GeneralJournalPage() {
         description: newDesc.trim(),
       });
 
-      setJournals((js) => [
-        {
-          id: created.journalID,
-          journal_date: created.document_date,
-          type: created.type,
-          description: created.description,
-          status: created.status as JournalStatus,
-        },
-        ...js,
-      ]);
+      // If we're on the first page, prepend the new item (trim to PAGE_SIZE)
+      setPages((prev) => {
+        if (currentIdx !== 0) return prev;
+        const updatedPage0: JournalHeader[] = [
+          {
+            id: created.journalID,
+            journal_date: created.document_date,
+            type: created.type,
+            description: created.description,
+            status: created.status as JournalStatus,
+          },
+          ...(prev[0] ?? []),
+        ].slice(0, PAGE_SIZE);
+        const next = [...prev];
+        next[0] = updatedPage0;
+        return next;
+      });
 
       setNewType("");
       setNewDesc("");
@@ -133,40 +209,84 @@ export default function GeneralJournalPage() {
   }
 
   function toggleAll() {
-    if (selected.size === journals.length) {
+    if (selected.size === currentPage.length) {
       setSelected(new Set());
     } else {
-      setSelected(new Set(journals.map((j) => j.id)));
+      setSelected(new Set(currentPage.map((j) => j.id)));
     }
   }
 
   return (
     <div className="min-h-screen bg-inherit text-inherit font-[family-name:var(--font-geist-sans)] flex flex-col items-center">
-      <main className="pt-24 px-4 sm:px-16 w-full max-w-5xl space-y-8">
-        <div className="flex flex-col items-center space-y-3">
-          <h2 className="text-2xl font-semibold text-center">General Journals</h2>
-          <button
-            onClick={openModal}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-          >
-            New Journal
-          </button>
+      <main className="pt-24 px-4 sm:px-16 w-full max-w-6xl space-y-4">
+
+        {/* Sticky top bar: title + actions + pager */}
+        <div className="sticky top-20 z-20 bg-inherit border-b border-black/10 dark:border-white/10">
+          <div className="py-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="text-2xl font-semibold">General Journals</h2>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={openModal}
+                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+              >
+                New Journal
+              </button>
+              <button
+                onClick={loadFirstPage}
+                className="px-3 py-2 rounded border hover:bg-gray-50 dark:hover:bg-gray-900"
+                disabled={loading}
+                title="Refresh"
+              >
+                Refresh
+              </button>
+
+              <div className="mx-2 h-6 w-px bg-black/10 dark:bg-white/10" />
+
+              <button
+                onClick={loadPrev}
+                disabled={!hasPrev || loading}
+                className="px-3 py-2 rounded border hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50"
+              >
+                ◀ Prev
+              </button>
+
+              <span className="text-sm text-gray-600 dark:text-gray-300 px-2">
+                Page {currentIdx + 1}
+              </span>
+
+              <button
+                onClick={loadNext}
+                disabled={loading || !hasNext || !nextCursor}
+                className="px-3 py-2 rounded border hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50"
+              >
+                Next ▶
+              </button>
+
+              {!hasNext && (
+                <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
+                  No more results
+                </span>
+              )}
+            </div>
+          </div>
         </div>
 
-        {loading ? (
-          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-            Loading...
-          </div>
-        ) : (
-          <div className="overflow-auto rounded-lg border border-black/20 shadow-sm">
-            <table className="min-w-full table-auto text-sm">
-              <thead className="bg-gray-200 dark:bg-gray-800 text-left text-gray-900 dark:text-white rounded-t-lg">
+        {/* Scrollable table container */}
+        <div className="rounded-lg border border-black/20 shadow-sm">
+          <div className="max-h-[70vh] overflow-auto">
+            <table className="min-w-full table-auto text-sm border-collapse">
+              {/* Sticky header inside scroll container */}
+              <thead className="sticky top-0 z-10 bg-gray-200 dark:bg-gray-800 text-left text-gray-900 dark:text-white">
                 <tr>
-                  <th className="px-3 py-2 border-b first:rounded-tl-lg">
+                  <th className="px-3 py-2 border-b">
                     <input
                       ref={selectAllRef}
                       type="checkbox"
-                      checked={selected.size > 0 && selected.size === journals.length}
+                      checked={
+                        selected.size > 0 &&
+                        selected.size === (currentPage?.length ?? 0)
+                      }
                       onChange={toggleAll}
                       className="form-checkbox h-4 w-4 text-blue-600"
                     />
@@ -175,59 +295,78 @@ export default function GeneralJournalPage() {
                   <th className="border-b px-3 py-2">Date</th>
                   <th className="border-b px-3 py-2">Type</th>
                   <th className="border-b px-3 py-2">Description</th>
-                  <th className="border-b px-3 py-2 last:rounded-tr-lg">Status</th>
+                  <th className="border-b px-3 py-2">Status</th>
                 </tr>
               </thead>
+
               <tbody>
-                {journals.map((j, index) => {
-                  const isSelected = selected.has(j.id);
-                  return (
-                    <tr
-                      key={j.id ?? `row-${index}`}
-                      onClick={() => toggleRow(j.id)}
-                      className={`border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900 cursor-pointer ${
-                        isSelected ? "bg-blue-50 dark:bg-blue-900/40" : ""
-                      }`}
-                    >
-                      <td className="px-3 py-2">
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => toggleRow(j.id)}
-                          onClick={(e) => e.stopPropagation()}
-                          className="form-checkbox h-4 w-4 text-blue-600"
-                        />
-                      </td>
-                      <td className="px-3 py-2 border">
-                        <Link
-                          href={`/general_ledger/general_journal/journal_lines?id=${j.id}`}
-                          className="text-blue-600 hover:underline"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          {j.id}
-                        </Link>
-                      </td>
-                      <td className="px-3 py-2 border">{j.journal_date}</td>
-                      <td className="px-3 py-2 border">{j.type}</td>
-                      <td className="px-3 py-2 border">{j.description}</td>
-                      <td className="px-3 py-2 border">
-                        <span
-                          className={`inline-block px-2 py-1 rounded text-xs ${
-                            j.status === "posted"
-                              ? "bg-green-200 text-green-800"
-                              : "bg-yellow-200 text-yellow-800"
+                {loading && pages.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-3 py-6 text-center text-gray-500 dark:text-gray-400">
+                      Loading...
+                    </td>
+                  </tr>
+                ) : (
+                  <>
+                    {currentPage.map((j, index) => {
+                      const isSelected = selected.has(j.id);
+                      return (
+                        <tr
+                          key={j.id ?? `row-${index}`}
+                          onClick={() => toggleRow(j.id)}
+                          className={`border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900 cursor-pointer ${
+                            isSelected ? "bg-blue-50 dark:bg-blue-900/40" : ""
                           }`}
                         >
-                          {j.status.toUpperCase()}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
+                          <td className="px-3 py-2">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleRow(j.id)}
+                              onClick={(e) => e.stopPropagation()}
+                              className="form-checkbox h-4 w-4 text-blue-600"
+                            />
+                          </td>
+                          <td className="px-3 py-2">
+                            <Link
+                              href={`/general_ledger/general_journal/journal_lines?id=${j.id}`}
+                              className="text-blue-600 hover:underline"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {j.id}
+                            </Link>
+                          </td>
+                          <td className="px-3 py-2">{j.journal_date}</td>
+                          <td className="px-3 py-2">{j.type}</td>
+                          <td className="px-3 py-2">{j.description}</td>
+                          <td className="px-3 py-2">
+                            <span
+                              className={`inline-block px-2 py-1 rounded text-xs ${
+                                j.status === "posted"
+                                  ? "bg-green-200 text-green-800"
+                                  : "bg-yellow-200 text-yellow-800"
+                              }`}
+                            >
+                              {j.status.toUpperCase()}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+
+                    {currentPage.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="px-3 py-6 text-center text-gray-500 dark:text-gray-400">
+                          No records on this page.
+                        </td>
+                      </tr>
+                    )}
+                  </>
+                )}
               </tbody>
             </table>
           </div>
-        )}
+        </div>
       </main>
 
       {/* Centered Modal */}

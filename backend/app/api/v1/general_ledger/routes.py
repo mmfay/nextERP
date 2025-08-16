@@ -3,7 +3,7 @@ from typing import Optional
 from datetime import date
 from .service import *
 from .schemas import *
-
+from app.services.Schemas.Pagination import Page
 router = APIRouter()
 
 @router.get("/trial_balance", response_model=list[TrialBalanceEntry])
@@ -86,9 +86,14 @@ def create_journal(payload: CreateGeneralJournal):
     Create a new GeneralJournal with a generated ID and initial status 'draft'.
     """
     return create_general_journal(payload)
-@router.get("/general_journals", response_model=list[GeneralJournal])
-def general_journals():
-    return get_general_journals()
+
+@router.get("/general_journals", response_model=Page[GeneralJournal])
+def general_journals(
+    limit: int = Query(50, ge=1, le=200),
+    next_cursor: str | None = Query(None),
+    prev_cursor: str | None = Query(None),
+):
+    return get_general_journals(limit=limit, next_cursor=next_cursor, prev_cursor=prev_cursor)
 
 @router.get("/general_journals/{journal_id}", response_model=GeneralJournal)
 def get_general_journal(journal_id: str):

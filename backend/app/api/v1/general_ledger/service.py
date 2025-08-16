@@ -11,7 +11,6 @@ from app.data.general_ledger.in_memory_store import (
     _financial_dimension_values,
     _account_combinations,
     _gl_entries,
-    _general_journal_header,
     _journal_lines,
     _posting_setup,
 )

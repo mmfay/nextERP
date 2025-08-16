@@ -265,41 +265,6 @@ _subledger_entries: list[SubledgerEntry] = [
     )
 ]
 
-_general_journal_header: list[GeneralJournal] = [
-    GeneralJournal(
-        journalID="GJ-000001",
-        document_date=date(2025, 1, 1),
-        type="Opening",
-        description="Opening balances for new fiscal year",
-        status="posted",
-
-    ),
-    GeneralJournal(
-        journalID="GJ-000002",
-        document_date=date(2025, 1, 15),
-        type="Accrual",
-        description="Accrual for utilities",
-        status="posted",
-
-    ),
-    GeneralJournal(
-        journalID="GJ-000003",
-        document_date=date(2025, 2, 1),
-        type="Payroll",
-        description="January payroll expenses",
-        status="draft",
-
-    ),
-    GeneralJournal(
-        journalID="GJ-000004",
-        document_date=date(2025, 2, 10),
-        type="Adjustment",
-        description="Reclassify office supply expenses",
-        status="posted",
-
-    )
-]
-
 _journal_lines: dict[str, list[JournalLine]] = {
     "GJ-000001": [
         JournalLine(

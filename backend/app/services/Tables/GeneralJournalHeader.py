@@ -1,8 +1,5 @@
 from app.classes.DataBaseConnection import DB
 from typing import Optional, Dict, Any, List
-from app.data.general_ledger.in_memory_store import (
-    _general_journal_header
-)
 from app.api.v1.general_ledger.schemas import (
     GeneralJournal,
     CreateGeneralJournal

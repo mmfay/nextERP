@@ -94,6 +94,9 @@ class GeneralJournal(BaseModel):
     type: str
     description: str
     status: str
+    posted: Optional[datetime]
+    companyID: int
+    recordID: int
 
 class CreateGeneralJournal(BaseModel):
     document_date: date

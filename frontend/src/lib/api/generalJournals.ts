@@ -2,10 +2,13 @@
 
 export type GeneralJournal = {
   journalID: string;
-  document_date: string;
+  document_date: string;   // ISO date string
   type: string;
   description: string;
-  status: string;
+  status: string;          // 'draft' | 'posted'
+  posted: string | null;   // ISO datetime string or null if not posted
+  companyID: number;
+  recordID: number;
 };
 
 export type Page<T> = {

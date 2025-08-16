@@ -25,14 +25,17 @@ class GeneralJournalHeader:
 
         sql = f"""
             SELECT
-                journal_id AS "journalID",
+                journal_id    AS "journalID",
                 document_date,
                 type,
                 description,
-                status
+                status,
+                posted,
+                company_id    AS "companyID",
+                record_id     AS "recordID"
             FROM GENERALJOURNALHEADER
             {where_clause}
-            ORDER BY document_date DESC
+            ORDER BY record_id DESC
             LIMIT %s;
         """
         params.append(limit + 1)  # +1 to detect has_next

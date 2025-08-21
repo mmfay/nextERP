@@ -6,12 +6,8 @@ from fastapi import HTTPException, status
 from app.services.Tables import FinancialDimensionValues, FinancialDimensions, MainAccounts, GeneralJournalHeader, GeneralJournalLines
 from app.classes import GeneralJournals
 from app.data.general_ledger.in_memory_store import (
-    _main_accounts,
-    _financial_dimensions,
-    _financial_dimension_values,
     _account_combinations,
     _gl_entries,
-    _journal_lines,
     _posting_setup,
 )
 from app.services.sequences import get_next_id, get_next_record
@@ -104,24 +100,24 @@ def get_trial_balance(
 # -----------------------------
 # General Journals
 # -----------------------------
-def get_general_journals(*, limit: int, next_cursor: Optional[str], prev_cursor: Optional[str]) -> Dict[str, Any]:
-    return GeneralJournalHeader.get_page(limit=limit, next_cursor=next_cursor, prev_cursor=prev_cursor)
+async def get_general_journals(*, limit: int, next_cursor: Optional[str], prev_cursor: Optional[str]) -> Dict[str, Any]:
+    return await GeneralJournalHeader.get_page(limit=limit, next_cursor=next_cursor, prev_cursor=prev_cursor)
 
-def get_general_journal_by_id(journal_id: str) -> Optional[GeneralJournal]:
-    return GeneralJournalHeader.findByJournalID(journal_id)
+async def get_general_journal_by_id(journal_id: str) -> Optional[GeneralJournal]:
+    return await GeneralJournalHeader.findByJournalID(journal_id)
 
-def validate_post_journal(journal_id: str) -> GeneralJournal:
+async def validate_post_journal(journal_id: str) -> GeneralJournal:
     # validate and post journal
-    return GeneralJournalHeader.postJournal(journal_id)
+    return await GeneralJournalHeader.postJournal(journal_id)
 
-def create_general_journal(data: CreateGeneralJournal) -> GeneralJournal:
-    return GeneralJournalHeader.create(data)
+async def create_general_journal(data: CreateGeneralJournal) -> GeneralJournal:
+    return await GeneralJournalHeader.create(data)
 
 # -----------------------------
 # General Journals Lines
 # -----------------------------
-def get_general_journal_lines(journal_id: str) -> list[JournalLine]:
-    return GeneralJournalLines.findByJournalID(journal_id)
+async def get_general_journal_lines(journal_id: str) -> list[JournalLineNew]:
+    return await GeneralJournalLines.findByJournalID(journal_id)
 
 def upsert_journal_lines(journal_id: str, incoming: List[JournalLine]) -> List[JournalLine]:
     return GeneralJournalLines.upsert(journal_id, incoming)

@@ -104,12 +104,22 @@ class CreateGeneralJournal(BaseModel):
     description: str
 
 class JournalLine(BaseModel):
-    lineID: str
+    lineID: int
     journalID: str
     account: str
     description: Optional[str] = None
     debit: float
     credit: float
+
+class JournalLineNew(BaseModel):
+    lineID: int
+    journalID: str
+    account: str
+    description: Optional[str] = None
+    debit: float
+    credit: float
+    companyID: int 
+    recordID: int
 
 class PostingSetup(BaseModel):
     module: int

@@ -81,37 +81,37 @@ def save_combinations(data: list[AccountCombinationRequest]):
     status_code=status.HTTP_201_CREATED,
     summary="Create a new general journal",
 )
-def create_journal(payload: CreateGeneralJournal):
+async def create_journal(payload: CreateGeneralJournal):
     """
     Create a new GeneralJournal with a generated ID and initial status 'draft'.
     """
-    return create_general_journal(payload)
+    return await create_general_journal(payload)
 
 @router.get("/general_journals", response_model=Page[GeneralJournal])
-def general_journals(
+async def general_journals(
     limit: int = Query(50, ge=1, le=200),
     next_cursor: str | None = Query(None),
     prev_cursor: str | None = Query(None),
 ):
-    return get_general_journals(limit=limit, next_cursor=next_cursor, prev_cursor=prev_cursor)
+    return await get_general_journals(limit=limit, next_cursor=next_cursor, prev_cursor=prev_cursor)
 
 @router.get("/general_journals/{journal_id}", response_model=GeneralJournal)
-def get_general_journal(journal_id: str):
-    journal = get_general_journal_by_id(journal_id)
+async def get_general_journal(journal_id: str):
+    journal = await get_general_journal_by_id(journal_id)
     if journal is None:
         raise HTTPException(status_code=404, detail="Journal not found")
     return journal
 
 @router.patch("/general_journals/{journal_id}", response_model=GeneralJournal)
-def post_journal(journal_id: str):
-    return validate_post_journal(journal_id)
+async def post_journal(journal_id: str):
+    return await validate_post_journal(journal_id)
 
 # -----------------------------
 # General Journal Line
 # -----------------------------
-@router.get("/general_journals/{journal_id}/lines", response_model=list[JournalLine])
-def general_journal_lines(journal_id: str):
-    lines = get_general_journal_lines(journal_id)
+@router.get("/general_journals/{journal_id}/lines", response_model=list[JournalLineNew])
+async def general_journal_lines(journal_id: str):
+    lines = await get_general_journal_lines(journal_id)
     if lines is None:
         raise HTTPException(status_code=404, detail="Journal not found or has no lines")
     return lines

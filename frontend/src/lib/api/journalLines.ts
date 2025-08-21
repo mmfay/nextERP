@@ -1,12 +1,14 @@
 // lib/api/journalLines.ts
 
 export type JournalLine = {
-  lineID: string;
+  lineID: number;
   journalID: string;
   account: string;
   description?: string;
   debit: number;
   credit: number;
+  companyID: number;
+  recordID: number;
 };
 
 /**

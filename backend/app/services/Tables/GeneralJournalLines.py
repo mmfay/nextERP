@@ -1,9 +1,10 @@
+from app.classes.DataBaseConnection import DB
 from typing import List
 from app.data.general_ledger.in_memory_store import (
     _journal_lines
 )
 from app.api.v1.general_ledger.schemas import (
-    JournalLine
+    JournalLineNew, JournalLine
 )
 from app.classes.GeneralJournals import GeneralJournals
 from app.classes.Error import Error
@@ -11,12 +12,34 @@ from app.services.sequences import get_next_id, get_next_record
 class GeneralJournalLines:
     
     @staticmethod
-    def findByJournalID(journal_id: str) -> List[JournalLine]:
+    async def findByJournalID(journal_id: str) -> List[JournalLineNew]:
+        print(journal_id)
         """
-        Return all journal lines for the given journal ID.
+        Return all journal lines for the given journal ID from the database.
         If no lines exist, returns an empty list.
+
+        Notes:
+        - Uses asyncpg-style placeholders ($1).
+        - Aliases columns to match the JournalLine schema field names.
+        - Orders by line_id ascending to keep line order stable.
         """
-        return _journal_lines.get(journal_id, [])
+        sql = """
+            SELECT
+                journal_id    AS "journalID",
+                line_id       AS "lineID",
+                account,
+                description,
+                debit,
+                credit,
+                company_id      AS "companyID",
+                record_id       AS "recordID"
+            FROM GENERALJOURNALLINES
+            WHERE journal_id = $1
+            ORDER BY line_id ASC;
+        """
+        rows = await DB.fetch_all(sql, (journal_id,))
+
+        return [JournalLineNew(**dict(r)) for r in rows]
 
     @staticmethod
     def upsert(journal_id: str, incoming: List[JournalLine]) -> List[JournalLine]:

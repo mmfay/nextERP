@@ -200,3 +200,17 @@ VALUES
     ('GJ-000198', '2025-07-17', 'Payroll', 'Payroll entry 198', 'draft', NULL, 1),
     ('GJ-000199', '2025-07-18', 'Adjustment', 'Adjustment entry 199', 'draft', NULL, 1),
     ('GJ-000200', '2025-07-19', 'Misc', 'Misc entry 200', 'draft', NULL, 1);
+
+-- Journal GJ-000200 (Misc, 2025-07-19)
+INSERT INTO GENERALJOURNALLINES
+(journal_id, line_id, account, description, debit, credit, company_id) VALUES
+('GJ-000200', 1, '6000', 'Misc expense', 500.00, 0.00, 1),
+('GJ-000200', 2, '1000', 'Cash', 0.00, 500.00, 1),
+('GJ-000199', 1, '1200', 'Prepaid insurance adj', 0.00, 300.00, 1),
+('GJ-000199', 2, '6100', 'Insurance expense adj', 300.00, 0.00, 1),
+('GJ-000198', 1, '7000', 'Wages expense', 2000.00, 0.00, 1),
+('GJ-000198', 2, '2100', 'Wages payable', 0.00, 2000.00, 1),
+('GJ-000197', 1, '6200', 'Utilities expense accrual', 400.00, 0.00, 1),
+('GJ-000197', 2, '2200', 'Accrued liabilities', 0.00, 400.00, 1),
+('GJ-000196', 1, '1000', 'Opening balance cash', 10000.00, 0.00, 1),
+('GJ-000196', 2, '3000', 'Opening retained earnings', 0.00, 10000.00, 1);

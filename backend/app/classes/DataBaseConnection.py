@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from typing import Any, Iterable, Optional, Sequence, List, Dict
 
 import asyncpg
+import json
 
 
 def _parse_rowcount(tag: str) -> int:
@@ -20,6 +21,14 @@ def _parse_rowcount(tag: str) -> int:
     except Exception:
         pass
     return 0
+
+async def _init_conn(conn: asyncpg.Connection) -> None:
+    """
+    Called for every connection created by the pool.
+    Ensures json/jsonb come back as Python objects (dict/list) instead of strings.
+    """
+    await conn.set_type_codec('json',  encoder=json.dumps, decoder=json.loads, schema='pg_catalog')
+    await conn.set_type_codec('jsonb', encoder=json.dumps, decoder=json.loads, schema='pg_catalog')
 
 
 class DB:
@@ -62,7 +71,7 @@ class DB:
             dsn=dsn,
             min_size=min_size,
             max_size=max_size,
-            # You can tune statement_cache_size, max_inactive_connection_lifetime, etc. here if desired
+            init=_init_conn,
         )
 
     @classmethod

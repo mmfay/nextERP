@@ -20,7 +20,7 @@ def _to_int(val) -> Optional[int]:
     # allow things like Decimal
     return int(val)
 
-class GeneralJournalHeader:
+class GeneralJournalTable:
 
     @staticmethod
     async def get_page( *, limit: int = 50, next_cursor: Optional[str] = None, prev_cursor: Optional[str] = None) -> Dict[str, Any]:
@@ -53,7 +53,7 @@ class GeneralJournalHeader:
                 posted,
                 company_id    AS "companyID",
                 record_id     AS "recordID"
-            FROM GENERALJOURNALHEADER
+            FROM GENERALJOURNALTABLE
             {where_clause}
             ORDER BY record_id DESC
             LIMIT {limit_placeholder};
@@ -97,7 +97,7 @@ class GeneralJournalHeader:
                 posted, 
                 company_id as "companyID",
                 record_id as "recordID"
-            FROM GENERALJOURNALHEADER
+            FROM GENERALJOURNALTABLE
             WHERE journal_id = $1;
         """
         row = await DB.fetch_one(sql, (journal_id,))
@@ -121,7 +121,7 @@ class GeneralJournalHeader:
 
         # 3) Update status and return the updated row
         sql = """
-            UPDATE GENERALJOURNALHEADER
+            UPDATE GENERALJOURNALTABLE
                SET status = $1
              WHERE journal_id = $2
             RETURNING
@@ -144,10 +144,9 @@ class GeneralJournalHeader:
         Insert a new General Journal header and return it.
         Uses asyncpg-style $ placeholders.
         """
-        new_id = get_next_id("GJ")  # sync generator is fine
 
         sql = """
-            INSERT INTO GENERALJOURNALHEADER (
+            INSERT INTO GENERALJOURNALTABLE (
                 journal_id,
                 document_date,
                 type,
@@ -183,3 +182,15 @@ class GeneralJournalHeader:
             row = dict(row)
 
         return GeneralJournal(**row)
+    
+    @staticmethod
+    async def recordLock(journal_id: str, company_id: int):
+        sql = f"""
+            SELECT
+                *
+            FROM GENERALJOURNALTABLE
+            WHERE journal_id = $1 AND company_id = $2
+            FOR UPDATE;
+        """
+        
+        row = await DB.fetch_one(sql, [journal_id, company_id])

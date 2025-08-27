@@ -15,3 +15,11 @@ class Error:
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"{title}: {detail}"
         )
+
+    @staticmethod
+    def conflict(title: str, detail: str):
+        """Use for optimistic concurrency/version conflicts (HTTP 409)."""
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"{title}: {detail}"
+        )

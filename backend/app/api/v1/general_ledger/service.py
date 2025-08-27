@@ -3,8 +3,15 @@ from datetime import datetime, date
 from uuid import uuid4
 from typing import List, Optional, Dict, Any
 from fastapi import HTTPException, status
-from app.services.Tables import FinancialDimensionValues, FinancialDimensions, MainAccounts, GeneralJournalHeader, GeneralJournalLines
+from app.services.Tables import (
+    FinancialDimensionValues, 
+    FinancialDimensions, 
+    MainAccounts, 
+    GeneralJournalTable, 
+    GeneralJournalTrans
+)
 from app.classes import GeneralJournals
+from app.classes.Response import SaveResponse
 from app.data.general_ledger.in_memory_store import (
     _account_combinations,
     _gl_entries,
@@ -101,29 +108,28 @@ def get_trial_balance(
 # General Journals
 # -----------------------------
 async def get_general_journals(*, limit: int, next_cursor: Optional[str], prev_cursor: Optional[str]) -> Dict[str, Any]:
-    return await GeneralJournalHeader.get_page(limit=limit, next_cursor=next_cursor, prev_cursor=prev_cursor)
+    return await GeneralJournalTable.get_page(limit=limit, next_cursor=next_cursor, prev_cursor=prev_cursor)
 
 async def get_general_journal_by_id(journal_id: str) -> Optional[GeneralJournal]:
-    return await GeneralJournalHeader.findByJournalID(journal_id)
+    return await GeneralJournalTable.findByJournalID(journal_id)
 
 async def validate_post_journal(journal_id: str) -> GeneralJournal:
-    # validate and post journal
-    return await GeneralJournalHeader.postJournal(journal_id)
+    return await GeneralJournalTable.postJournal(journal_id)
 
 async def create_general_journal(data: CreateGeneralJournal) -> GeneralJournal:
-    return await GeneralJournalHeader.create(data)
+    return await GeneralJournalTable.create(data)
 
 # -----------------------------
 # General Journals Lines
 # -----------------------------
-async def get_general_journal_lines(journal_id: str) -> list[JournalLineNew]:
-    return await GeneralJournalLines.findByJournalID(journal_id)
+async def get_general_journal_lines(*, journal_id: str, limit: int, next_cursor: Optional[str], prev_cursor: Optional[str]) -> list[GeneralJournalTransWithFinancialDimensionsRead]:
+    return await GeneralJournalTrans.get_page(journal_id=journal_id, limit=limit, next_cursor=next_cursor, prev_cursor=prev_cursor)
 
-def upsert_journal_lines(journal_id: str, incoming: List[JournalLine]) -> List[JournalLine]:
-    return GeneralJournalLines.upsert(journal_id, incoming)
+async def upsert_journal_lines(journal_id: str, updates: List[GeneralJournalTransUpdate], inserts: List[GeneralJournalTransCreate]) -> SaveResponse:
+    return await GeneralJournalTrans.upsert(journal_id, updates, inserts)
 
-def delete_journal_line(journal_id: str, line_id: str) -> bool:
-    return GeneralJournalLines.delete(journal_id, line_id)
+async def delete_journal_line(recordID: int, versionID: int):
+    return await GeneralJournalTrans.delete(recordID, versionID)
 
 # -----------------------------
 # Posting Setup

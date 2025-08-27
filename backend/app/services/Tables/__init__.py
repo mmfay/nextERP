@@ -1,16 +1,16 @@
 from .FinancialDimensionValues import FinancialDimensionValues
 from .FinancialDimensions import FinancialDimensions
 from .MainAccounts import MainAccounts
-from .GeneralJournalHeader import GeneralJournalHeader
+from .GeneralJournalTable import GeneralJournalTable
 from .GeneralLedger import GeneralLedger
-from .GeneralJournalLines import GeneralJournalLines
+from .GeneralJournalTrans import GeneralJournalTrans
 from .SubLedger import SubLedger
 __all__ = [
     "FinancialDimensionValues",
     "FinancialDimensions",
     "MainAccounts",
-    "GeneralJournalHeader",
-    "GeneralJournalLines",
+    "GeneralJournalTable",
+    "GeneralJournalTrans",
     "GeneralLedger",
     "SubLedger"
 ]

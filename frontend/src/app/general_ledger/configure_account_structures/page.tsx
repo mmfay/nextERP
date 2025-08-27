@@ -4,13 +4,13 @@ import { useState, useEffect } from "react";
 import { SecureButton } from "@/app/components/SecureButton";
 import { Permissions } from "@/app/config/permissions";
 import { ChevronDown, ChevronRight } from "lucide-react";
-import { fetchFinancialDimensions } from "@/lib/api/financialDimensions";
-import { fetchDimensionValues } from "@/lib/api/financialDimensionValues";
+import { fetchFinancialDimensions } from "@/lib/api/general_ledger/financialDimensions";
+import { fetchDimensionValues } from "@/lib/api/general_ledger/financialDimensionValues";
 import {
   fetchAccountCombinations,
   saveAccountCombinations,
   AccountCombinationRequest,
-} from "@/lib/api/accountCombinations";
+} from "@/lib/api/general_ledger/accountCombinations";
 
 const mockAccounts = [
   { account: "4000", description: "Sales Revenue" },

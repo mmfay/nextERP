@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { TrialBalanceEntry, getTrialBalance } from "@/lib/api/trialBalance";
+import { TrialBalanceEntry, getTrialBalance } from "@/lib/api/general_ledger/trialBalance";
 
 export default function TrialBalancePage() {
   const [entries, setEntries] = useState<TrialBalanceEntry[]>([]);

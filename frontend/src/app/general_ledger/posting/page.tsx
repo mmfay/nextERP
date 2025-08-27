@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { fetchPostingSetup, updatePostingSetup } from "@/lib/api/postingSetup";
+import { fetchPostingSetup, updatePostingSetup } from "@/lib/api/general_ledger/postingSetup";
 import { fetchMainAccounts } from "@/lib/api/general_ledger/mainAccounts";
 
 const moduleTabs: Record<number, string> = {

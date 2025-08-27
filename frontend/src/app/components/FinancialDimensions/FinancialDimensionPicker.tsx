@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { fetchDimensionValues } from "@/lib/api/financialDimensionValues";
+import { fetchDimensionValues } from "@/lib/api/general_ledger/financialDimensionValues";
 
 export type Option = { value: string; label?: string };
 export type FDOptionFetcher = (

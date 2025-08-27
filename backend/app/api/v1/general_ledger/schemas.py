@@ -1,5 +1,6 @@
-from pydantic import BaseModel, constr
-from typing import Literal, Dict, List, Optional
+from pydantic import BaseModel, constr, Field
+from typing import Literal, Dict, List, Optional, Any
+from decimal import Decimal
 from datetime import date, datetime
 from uuid import UUID
 
@@ -46,7 +47,6 @@ class CreateFinancialDimensionValue(BaseModel):
 class AccountCombination(BaseModel):
     account: str
     dimensions: Dict[str, Optional[str]]  # e.g., {"FD_1": "01", "FD_2": None, ..., "FD_8": "02"}
-
 
 class AccountCombinationRequest(BaseModel):
     account: str
@@ -118,8 +118,45 @@ class JournalLineNew(BaseModel):
     description: Optional[str] = None
     debit: float
     credit: float
+    dimension: Optional[int] = None
+    dimensions: Dict[str, Any] = {}
     companyID: int 
     recordID: int
+class Config:
+        extra = "ignore"
+
+# -----------------------------
+# Journal Lines
+# -----------------------------
+class GeneralJournalTrans(BaseModel):
+    # Base Fields for General Jouranl Trans
+    journalID: str
+    account: str
+    description: Optional[str] = None
+    debit: Decimal
+    credit: Decimal
+    dimension: Optional[int] = None
+
+class GeneralJournalTransRead(GeneralJournalTrans):
+    # When reading from DB, these fields should exist as well.
+    lineID: int
+    companyID: int 
+    versionID: int
+    recordID: int
+
+class GeneralJournalTransCreate(GeneralJournalTrans):
+    # When creating, these must have values prior to added to the DB.
+    lineID: int
+    companyID: int 
+    versionID: int = Field(default=1, ge=1) 
+
+class GeneralJournalTransUpdate(GeneralJournalTransRead):
+    # Update should carry all the properties of a read.
+    pass
+
+class GeneralJournalTransWithFinancialDimensionsRead(GeneralJournalTransRead):
+    # Like a join to Financial Dimensions to show the data in its own json list per record.
+    dimensions: Dict[str, Any] = {}
 
 class PostingSetup(BaseModel):
     module: int

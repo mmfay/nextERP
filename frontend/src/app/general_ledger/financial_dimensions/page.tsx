@@ -5,12 +5,12 @@ import {
   fetchFinancialDimensions,
   updateFinancialDimension,
   FinancialDimension,
-} from "@/lib/api/financialDimensions";
+} from "@/lib/api/general_ledger/financialDimensions";
 import {
   fetchDimensionValues,
   addDimensionValue,
   deleteDimensionValue,
-} from "@/lib/api/financialDimensionValues";
+} from "@/lib/api/general_ledger/financialDimensionValues";
 import { SecureButton } from "@/app/components/SecureButton";
 import { Permissions } from "@/app/config/permissions";
 

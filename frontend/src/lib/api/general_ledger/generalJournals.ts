@@ -1,24 +1,7 @@
 // lib/api/generalJournals.ts
+import { Page } from "../shared/pagination/types";
+import { GeneralJournal } from "./types";
 
-export type GeneralJournal = {
-  journalID: string;
-  document_date: string;   // ISO date string
-  type: string;
-  description: string;
-  status: string;          // 'draft' | 'posted'
-  posted: string | null;   // ISO datetime string or null if not posted
-  companyID: number;
-  recordID: number;
-};
-
-export type Page<T> = {
-  items: T[];
-  has_next: boolean;
-  has_prev: boolean;
-  next_cursor?: string | null;
-  prev_cursor?: string | null;
-  limit: number;
-};
 
 const BASE_URL = "http://localhost:8000/api/v1/general_ledger/general_journals";
 

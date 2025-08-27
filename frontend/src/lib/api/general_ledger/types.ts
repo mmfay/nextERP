@@ -1,0 +1,58 @@
+export type JournalLine = {
+  lineID: number;
+  journalID: string;
+  account: string;
+  description?: string;
+  debit: number;
+  credit: number;
+  dimension: number;
+  companyID: number;
+  versionID: number;
+  recordID: number;
+};
+
+export type JournalLineTable = {
+  lineID: number | null;
+  journalID: string;
+  account: string;
+  description?: string;
+  debit: number;
+  credit: number;
+  dimension: number;
+  companyID: number;
+  versionID: number;
+  recordID: number;
+  isModified?: boolean;
+  isNew?: boolean;
+};
+
+export type Page<T> = {
+  items: T[];
+  has_next: boolean;
+  has_prev: boolean;
+  next_cursor?: string | null;
+  prev_cursor?: string | null;
+  limit: number;
+};
+
+export type GeneralJournal = {
+  journalID: string;
+  document_date: string;   
+  type: string;
+  description: string;
+  status: string;          
+  posted: string | null;  
+  companyID: number;
+  recordID: number;
+};
+
+export type GeneralJournalTransPayload = {
+  journalID: string;
+  updates: JournalLineTable[];
+  Inserts: JournalLineTable[];
+};
+
+export type GeneralJournalTransDelete = {
+  versionID: number;
+  recordID: number;
+}

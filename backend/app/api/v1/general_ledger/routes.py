@@ -1,8 +1,9 @@
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, status, Header
 from typing import Optional
 from datetime import date
 from .service import *
 from .schemas import *
+from app.classes.Response import SaveResponse
 from app.services.Schemas.Pagination import Page
 router = APIRouter()
 
@@ -109,24 +110,26 @@ async def post_journal(journal_id: str):
 # -----------------------------
 # General Journal Line
 # -----------------------------
-@router.get("/general_journals/{journal_id}/lines", response_model=list[JournalLineNew])
-async def general_journal_lines(journal_id: str):
-    lines = await get_general_journal_lines(journal_id)
-    if lines is None:
-        raise HTTPException(status_code=404, detail="Journal not found or has no lines")
-    return lines
+@router.get("/general_journals/{journal_id}/lines", response_model=Page[GeneralJournalTransWithFinancialDimensionsRead])
+async def general_journal_lines(
+    journal_id: str,
+    limit: int = Query(50, ge=1, le=200),
+    next_cursor: Optional[str] = Query(None),
+    prev_cursor: Optional[str] = Query(None),
+):
+    return await get_general_journal_lines(journal_id=journal_id, limit=limit, next_cursor=next_cursor, prev_cursor=prev_cursor)
 
-@router.put("/general_journals/{journal_id}/lines", response_model=List[JournalLine])
-def update_lines(journal_id: str, lines: List[JournalLine]):
-    # You may wish to validate journal existence first
-    return upsert_journal_lines(journal_id, lines)
+@router.post("/general_journals/{journal_id}/trans", response_model=SaveResponse)
+async def update_lines(journal_id: str, inserts: List[GeneralJournalTransCreate], updates: List[GeneralJournalTransUpdate]) -> SaveResponse:
+    return await upsert_journal_lines(journal_id, updates, inserts)
 
-@router.delete("/general_journals/{journal_id}/lines/{line_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_line(journal_id: str, line_id: str):
-    deleted = delete_journal_line(journal_id, line_id)
-    if not deleted:
-        raise HTTPException(status_code=404, detail="Line not found")
-    return
+@router.delete("/general_journals/trans/{recordID}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_line(recordID: int, if_match: str | None = Header(default=None)):
+    if if_match is None:
+        raise HTTPException(status_code=428, details="Missing If-Match")
+    versionID = int(if_match)
+    await delete_journal_line(recordID, versionID)
+
 
 # -----------------------------
 # General Ledger Posting Setup

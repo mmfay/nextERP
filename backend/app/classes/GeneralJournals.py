@@ -1,5 +1,5 @@
 from app.classes.Error import Error
-from app.services.Tables import GeneralJournalHeader
+from app.services.Tables import GeneralJournalTable
 from app.data.general_ledger.in_memory_store import _journal_lines
 class GeneralJournals:
 

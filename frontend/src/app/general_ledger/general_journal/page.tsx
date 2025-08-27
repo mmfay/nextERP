@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   fetchGeneralJournalsPage,
   createGeneralJournal,
-} from "@/lib/api/generalJournals";
+} from "@/lib/api/general_ledger/generalJournals";
 
 type JournalStatus = "draft" | "posted";
 

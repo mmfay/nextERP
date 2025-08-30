@@ -1,11 +1,12 @@
 from app.classes.DataBaseConnection import DB
 from typing import List, Optional, Dict, Any
 from app.api.v1.general_ledger.schemas import (
-    GeneralJournalTransRead, GeneralJournalTransCreate, GeneralJournalTransUpdate, GeneralJournalTransWithFinancialDimensionsRead
+    GeneralJournalTransRead, GeneralJournalTransCreate, GeneralJournalTransUpdate, GeneralJournalTransWithFinancialDimensionsRead, FinancialDimensionCombosUpdate
 )
 from app.services.Tables.GeneralJournalTable import GeneralJournalTable
 from app.classes.Error import Error
 from app.classes.Response import SaveResponse
+from app.services.Tables.FinancialDimensionCombos import FinancialDimensionCombos
 from app.services.cursor import encode_cursor, decode_cursor
 
 def _to_int(val) -> Optional[int]:
@@ -74,6 +75,7 @@ class GeneralJournalTrans:
                     'fd5', FDC.fd5,
                     'fd6', FDC.fd6,
                     'fd7', FDC.fd7,
+                    'fd8', FDC.fd8,
                     'recordID', FDC.record_id
                     )
                 )                   AS DIMENSIONS,
@@ -90,7 +92,7 @@ class GeneralJournalTrans:
         """
 
         rows = await DB.fetch_all(sql, tuple(params))
-
+        print(rows)
         has_next = len(rows) > limit
         rows = rows[:limit]
 
@@ -168,6 +170,7 @@ class GeneralJournalTrans:
     
     @staticmethod
     async def update(record: GeneralJournalTransUpdate) -> GeneralJournalTransRead:
+
         sql = """
             UPDATE GENERALJOURNALTRANS
             SET account = $1,
@@ -193,12 +196,20 @@ class GeneralJournalTrans:
                 version_id as "versionID",
                 record_id as "recordID";
         """
+
+        # get the dimension
+        dimension = record.dimension
+
+        # if its less than 0, it has been modified or is new. check the dimensions and return correct one.
+        if (dimension < 0):
+            dimension = await FinancialDimensionCombos.findOrCreate(record.dimensions)
+
         row = await DB.fetch_one(sql, [
             record.account,
             record.description,
             record.debit,
             record.credit,
-            record.dimension,
+            dimension,
             record.recordID,
             record.journalID,
             record.companyID,
@@ -212,7 +223,7 @@ class GeneralJournalTrans:
     
     @staticmethod
     async def insert(record: GeneralJournalTransUpdate) -> GeneralJournalTransRead:
-    
+        
         sql = """
             INSERT INTO GENERALJOURNALTRANS
                 (journal_id, account, description, debit, credit, dimension, company_id, line_id, version_id)
@@ -230,13 +241,22 @@ class GeneralJournalTrans:
                 version_id AS "versionID",
                 record_id  AS "recordID";
         """
+
+        # get the dimension
+        dimension = record.dimension
+
+        # if its less than 0, it has been modified or is new. check the dimensions and return correct one.
+        if (dimension < 0):
+            print(record.dimensions)
+            dimension = await FinancialDimensionCombos.findOrCreate(record.dimensions)
+
         row = await DB.fetch_one(sql, [
             record.journalID,
             record.account,
             record.description,
             record.debit,
             record.credit,
-            1,
+            dimension,
             1,
             1,
             record.journalID,

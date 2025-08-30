@@ -124,7 +124,29 @@ class JournalLineNew(BaseModel):
     recordID: int
 class Config:
         extra = "ignore"
+# -----------------------------
+# FinancialDimensionCombos
+# -----------------------------
+class FinancialDimensionCombos(BaseModel):
+    # Base Fields
+    fd1: Optional[str] = None
+    fd2: Optional[str] = None 
+    fd3: Optional[str] = None
+    fd4: Optional[str] = None
+    fd5: Optional[str] = None
+    fd6: Optional[str] = None
+    fd7: Optional[str] = None
+    fd8: Optional[str] = None
 
+class FinancialDimensionCombosRead(FinancialDimensionCombos):
+    # When Read, these should exist as well
+    versionID: int = Field(default=1, ge=1) 
+    companyID: int 
+    recordID: int
+
+class FinancialDimensionCombosUpdate(FinancialDimensionCombos):
+    recordID: int
+    pass
 # -----------------------------
 # Journal Lines
 # -----------------------------
@@ -136,6 +158,7 @@ class GeneralJournalTrans(BaseModel):
     debit: Decimal
     credit: Decimal
     dimension: Optional[int] = None
+    dimensions: Optional[FinancialDimensionCombos] = None
 
 class GeneralJournalTransRead(GeneralJournalTrans):
     # When reading from DB, these fields should exist as well.

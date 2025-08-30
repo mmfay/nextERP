@@ -206,8 +206,8 @@ INSERT INTO GENERALJOURNALTRANS
 (journal_id, line_id, account, description, debit, credit, dimension, company_id, version_id) VALUES
 ('GJ-000200', 1, '6000', 'Misc expense', 500.00, 0.00, NULL, 1, 1),
 ('GJ-000200', 2, '1000', 'Cash', 0.00, 500.00, NULL, 1, 1),
-('GJ-000199', 1, '1200', 'Prepaid insurance adj', 0.00, 300.00, NULL, 1, 1),
-('GJ-000199', 2, '6100', 'Insurance expense adj', 300.00, 0.00, NULL, 1, 1),
+('GJ-000199', 1, '1200', 'Prepaid insurance adj', 0.00, 300.00, 1, 1, 1),
+('GJ-000199', 2, '6100', 'Insurance expense adj', 300.00, 0.00, 1, 1, 1),
 ('GJ-000198', 1, '7000', 'Wages expense', 2000.00, 0.00, NULL, 1, 1),
 ('GJ-000198', 2, '2100', 'Wages payable', 0.00, 2000.00, NULL, 1, 1),
 ('GJ-000197', 1, '6200', 'Utilities expense accrual', 400.00, 0.00, NULL, 1, 1),
@@ -233,6 +233,6 @@ INSERT INTO FINANCIALDIMENSIONVALUES (code, description, dimension, company_id, 
 ('01', 'Northwest', 8, 1, 5),
 ('02', 'Southwest', 8, 1, 6);
 
-INSERT INTO FINANCIALDIMENSIONCOMBOS (fd1, fd2, fd3, fd4, fd5, fd6, fd7, fd8, company_id, record_id) VALUES 
-('01','100',NULL,NULL,NULL,NULL,NULL,NULL,1,1),
-('02','100',NULL,NULL,NULL,NULL,NULL,NULL,1,2);
+INSERT INTO FINANCIALDIMENSIONCOMBOS (fd1, fd2, fd3, fd4, fd5, fd6, fd7, fd8, version_id, company_id) VALUES 
+('01', '100', NULL, NULL, NULL, NULL, NULL, NULL, 1, 1),
+('02', '100', NULL, NULL, NULL, NULL, NULL, NULL, 1, 1);

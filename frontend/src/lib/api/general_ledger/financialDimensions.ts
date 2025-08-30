@@ -1,10 +1,5 @@
 // lib/api/financialDimensions.ts
-
-export type FinancialDimension = {
-  id: number;
-  name: string;
-  in_use: boolean;
-};
+import { FinancialDimension } from "./types";
 
 export async function fetchFinancialDimensions(): Promise<FinancialDimension[]> {
   const res = await fetch("http://localhost:8000/api/v1/general_ledger/financial_dimensions", { cache: "no-store" });

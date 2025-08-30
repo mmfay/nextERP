@@ -6,12 +6,13 @@ import PaginationControls from "@/app/components/Buttons/PaginationControls";
 import RecordControls from "@/app/components/Buttons/RecordControls";
 import { fetchJournalLines, updateJournalTrans, deleteJournalLine } from "@/lib/api/general_ledger/journalLines";
 import AccountPicker from "@/app/components/FinancialDimensions/AccountPicker";
-import { JournalLineTable, GeneralJournalTransPayload, GeneralJournalTransDelete } from "@/lib/api/general_ledger/types";
+import FDPicker from "@/app/components/FinancialDimensions/FinancialDimensionPicker";
+import { JournalLineTable, GeneralJournalTransPayload, GeneralJournalTransDelete, Dimensions} from "@/lib/api/general_ledger/types";
 import { fetchJournalHeader } from "@/lib/api/general_ledger/generalJournals";
 
 export default function JournalLinesPage() {
 
-    // parameters
+    // parameters from previous page
     const journalID                     = useSearchParams().get("id")!;
 
     const [loading, setLoading]         = useState(false); 
@@ -72,7 +73,6 @@ export default function JournalLinesPage() {
             const page = await fetchJournalLines(journalID, { limit: 20 });
             const header = await fetchJournalHeader(journalID);
             setLines(page.items);
-            alert(JSON.stringify(page.next_cursor));
             setIsPosted(header.status == "draft" ? false : true);
 
         } catch (err) {
@@ -134,6 +134,17 @@ export default function JournalLinesPage() {
                 debit: 0,
                 credit: 0,
                 dimension: -1,
+                dimensions: {
+                    fd1: null,
+                    fd2: null,
+                    fd3: null,
+                    fd4: null,
+                    fd5: null,
+                    fd6: null,
+                    fd7: null,
+                    fd8: null,
+                    recordID: -1,
+                },
                 versionID: 1,
                 companyID: 1,
                 recordID: -1,
@@ -165,7 +176,7 @@ export default function JournalLinesPage() {
                     await deleteJournalLine(record);
                     setLines(prev => prev.filter(l => l.lineID !== line.lineID));
                 } catch (err) {
-                    alert
+                    
                 }
             }
 
@@ -180,7 +191,7 @@ export default function JournalLinesPage() {
 
         const inserts = lines.filter(l => !!l.isNew);
         const updates = lines.filter(l => !l.isNew && !!l.isModified);
-
+        
         const payload: GeneralJournalTransPayload = {
             journalID,
             updates,
@@ -224,6 +235,26 @@ export default function JournalLinesPage() {
         );
     }
 
+    // updates the fd of the record when modal is used.
+    const handleDimensionChange = (key: keyof Dimensions, value: string | null | undefined, lineID: number) => {
+        
+        const updatedLines = lines.map(l =>
+            l.lineID === lineID
+                ? {
+                    ...l,
+                    dimensions: {
+                    ...l.dimensions,
+                    [key]: value,   // overwrite fd key passed.
+                    },
+                    dimension: -1,
+                    isModified: true
+                }
+                : l
+        );
+        
+        setLines(updatedLines);
+    };
+
     return (
         <div className="min-h-screen bg-inherit text-inherit font-[family-name:var(--font-geist-sans)] flex flex-col items-center">
             <main className="pt-24 px-4 sm:px-16 w-full max-w-6xl space-y-4">
@@ -252,7 +283,7 @@ export default function JournalLinesPage() {
                     </div>
                 </div>
                 {/* Table */}
-                <div className="overflow-x-auto border border-black/10 dark:border-white/10 rounded-xl">
+                <div className="max-h-[70vh] overflow-auto">
                     <table className="w-full table-auto">
                         <thead className="sticky top-0 z-10 bg-gray-200 dark:bg-gray-800 text-gray-900 dark:text-white">
                             <tr>
@@ -268,6 +299,7 @@ export default function JournalLinesPage() {
                                 </th>
                                 <th className="border-b px-2 py-2 text-right">Line</th>
                                 <th className="border-b px-4 py-2">Account</th>
+                                <th className="border-b px-4 py-2">Financial Dimensions</th>
                                 <th className="border-b px-4 py-2">Description</th>
                                 <th className="border-b px-4 py-2 text-right">Debit</th>
                                 <th className="border-b px-4 py-2 text-right">Credit</th>
@@ -291,6 +323,13 @@ export default function JournalLinesPage() {
                                         label={line.account}
                                         onSelect={(acc) => setField(line.lineID, "account", acc.account)}
                                         disabled={isPosted}
+                                    />
+                                </td>
+                                <td className="px-4 py-2 border-b">
+                                    <FDPicker
+                                        recordID={line.lineID}
+                                        dimensions={line.dimensions}
+                                        onClick={handleDimensionChange}
                                     />
                                 </td>
                                 <td className="px-4 py-2 border-b">

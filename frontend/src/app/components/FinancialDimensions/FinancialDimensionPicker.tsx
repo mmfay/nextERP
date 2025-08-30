@@ -1,214 +1,199 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Dimensions, FinancialDimension } from "@/lib/api/general_ledger/types";
+import { fetchFinancialDimensions } from "@/lib/api/general_ledger/financialDimensions";
 import { fetchDimensionValues } from "@/lib/api/general_ledger/financialDimensionValues";
 
-export type Option = { value: string; label?: string };
-export type FDOptionFetcher = (
-  keyName: string,
-  query: string,
-  signal?: AbortSignal
-) => Promise<Option[]>;
-
-type Props = {
-  open: boolean;
-  keyName: string;     // "FD1".."FD8"
-  label?: string;      // e.g., "Department"
-  initialValue?: string;
-  onClose: () => void;
-  onPick: (value: string) => void;
-  /** Optional override fetcher; when provided we'll call it with empty query to load all. */
-  fetcher?: FDOptionFetcher;
+type FDPickerProps = {
+    recordID: number;
+    dimensions: Dimensions;     // "FD1".."FD8"
+    onClick?: (key: keyof Dimensions, value: string | null | undefined, record: number) => void;
 };
 
-const apiFetcherAll: FDOptionFetcher = async (keyName, _query, signal) => {
-  const dimId = Number(keyName.replace(/^FD/i, ""));
-  if (!Number.isFinite(dimId) || dimId < 1 || dimId > 8) return [];
-  const list = await fetchDimensionValues(dimId, { signal });
-  return (list ?? []).map((d: any) => ({
-    value: String(d.code ?? ""),
-    label: d.description ? String(d.description) : undefined,
-  }));
-};
+const FD_KEYS = ["fd1","fd2","fd3","fd4","fd5","fd6","fd7","fd8"] as const;
+type FDKey = typeof FD_KEYS[number];
 
-export default function FinancialDimensionPicker({
-  open,
-  keyName,
-  label,
-  initialValue,
-  onClose,
-  onPick,
-  fetcher,
-}: Props) {
-  const title = label ?? keyName;
+const pretty = (v?: string | null) => (v && v.trim() !== "" ? v : "—");
 
-  const dialogRef = useRef<HTMLDialogElement>(null);
-  const listRef = useRef<HTMLUListElement>(null);
+export default function FDPicker({
+    recordID,
+    dimensions,
+    onClick
+}: FDPickerProps) {
 
-  const [list, setList] = useState<Option[]>([]);
-  const [selected, setSelected] = useState<string>(initialValue ?? "");
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
+    const record                    = recordID
+    const [openKey, setOpenKey]     = useState<null | (typeof FD_KEYS)[number]>(null);
+    const [draft, setDraft]         = useState<string>("");
+    const dialogRef                 = useRef<HTMLDialogElement>(null);
 
-  const effectiveFetcher = useMemo<FDOptionFetcher>(() => fetcher ?? apiFetcherAll, [fetcher]);
+    const [optionsByKey, setOptionsByKey] = useState<
+        Partial<Record<(typeof FD_KEYS)[number], Array<{value: string; label?: string}>>>
+    >({});
 
-  // Open/close dialog and seed selection
-  useEffect(() => {
-    if (!dialogRef.current) return;
-    if (open) {
-      if (!dialogRef.current.open) dialogRef.current.showModal();
-      setSelected(initialValue ?? "");
-      setTimeout(() => listRef.current?.focus(), 0);
-    } else if (dialogRef.current.open) {
-      dialogRef.current.close();
-    }
-  }, [open, initialValue]);
+    const [dimensionValues, setDimensionValues] = useState<
+        { code: string; description: string; dimension: number; record: number }[]
+    >([]);
 
-  // Load entire list when opened
-  useEffect(() => {
-    if (!open) return;
-    const ac = new AbortController();
-    let cancelled = false;
+    const [inUse, setInUse]         = useState<FinancialDimension[]>([]);;
 
-    (async () => {
-      setLoading(true);
-      setErr(null);
-      try {
-        const items = await effectiveFetcher(keyName, "", ac.signal); // empty query => full list
-        if (cancelled) return;
-        setList(items);
-      } catch (e: any) {
-        if (cancelled) return;
-        setErr(e?.message || "Failed to load values.");
-        setList([]);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
+    // runs when openKey changes
+    useEffect(() => {
 
-    return () => {
-      cancelled = true;
-      ac.abort();
+        // provides the <dialog> element
+        const dlg = dialogRef.current;
+
+        // exit if it doesn't exist
+        if (!dlg) return;
+
+        // if there is an openKey and the dialog is not open, then show the modal.
+        if (openKey && !dlg.open) dlg.showModal();
+
+        // if there is not an openKey and the dialog is open, then close it. 
+        if (!openKey && dlg.open) dlg.close();
+
+    }, [openKey]);
+
+    // loads on modal open.
+    useEffect(() => {
+        
+        (async () => {
+            try {
+                // get the in use dimensions
+                const data = await fetchFinancialDimensions();
+
+                // get the specific dimension values (FD1 {100 - marking, 200 - sales, etc..})
+                const dimension = await fetchDimensionValues(FD_KEYS.indexOf(openKey) + 1);
+                setDimensionValues(dimension);
+                setInUse(data);
+            } catch (err) {
+                alert(err);
+            }
+        })();
+    
+
+    }, [openKey, optionsByKey]);
+
+    const handleOpen = async (key: (typeof FD_KEYS)[number]) => {
+        setDraft(dimensions[key] ?? ""); // seed with current value
+        setOpenKey(key);
     };
-  }, [open, keyName, effectiveFetcher]);
 
-  // Keyboard navigation
-  const move = (dir: 1 | -1) => {
-    if (!list.length) return;
-    const idx = Math.max(0, list.findIndex((o) => o.value === selected));
-    const next = (idx + dir + list.length) % list.length;
-    setSelected(list[next].value);
-  };
+    const handleClose = () => setOpenKey(null);
 
-  const handleEnter = () => {
-    if (!selected && list.length) setSelected(list[0].value);
-    const pick = selected || list[0]?.value;
-    if (pick) onPick(pick);
-  };
+    const handleOk = () => {
+        if (!openKey) return;
+        onClick?.(openKey, draft || null, record);
+        setOpenKey(null);
+    };
 
-  return (
-    <dialog
-      ref={dialogRef}
-      className="fixed inset-0 m-auto p-0 w-[32rem] max-w-[95vw] rounded-xl backdrop:bg-black/30"
-      onCancel={(e) => {
-        e.preventDefault();
-        onClose();
-      }}
-    >
-      <div className="bg-white rounded-xl overflow-hidden shadow-xl">
-        <div className="p-4 border-b flex items-center justify-between">
-          <h3 className="text-lg font-semibold">Select {title}</h3>
-          <button className="rounded-md px-2 py-1 border hover:bg-gray-50" onClick={onClose}>
-            Esc
-          </button>
-        </div>
+    // helper to select the financial dimension clicked in the modal
+    const choose = (code: string) => {
+        if (!openKey) return;
+        setDraft(code);
+        onClick?.(openKey, code, record); 
+        setOpenKey(null);        
+    };
 
-        <div className="p-2">
-          <div className="max-h-80 overflow-auto border rounded">
-            {loading ? (
-              <div className="p-4 text-sm text-gray-500">Loading…</div>
-            ) : err ? (
-              <div className="p-4 text-sm text-red-600 flex items-center justify-between">
-                <span>{err}</span>
+    return (
+        <>
+        <div>
+            {FD_KEYS.map((key, idx) => (
+                
+                <span key={key} className="inline-flex items-center">
                 <button
-                  className="ml-3 rounded border px-2 py-1 text-xs hover:bg-gray-50"
-                  onClick={async () => {
-                    try {
-                      setLoading(true);
-                      const items = await effectiveFetcher(keyName, "", undefined);
-                      setList(items);
-                      setErr(null);
-                    } catch (e: any) {
-                      setErr(e?.message || "Failed to load values.");
-                      setList([]);
-                    } finally {
-                      setLoading(false);
-                    }
-                  }}
+                    type="button"
+                    className="px-1 underline decoration-dotted hover:opacity-80"
+                    onClick={() => handleOpen(key)}
+                    disabled={!inUse[idx]?.in_use}
                 >
-                  Retry
+                    {pretty(dimensions[key])}
                 </button>
-              </div>
-            ) : list.length === 0 ? (
-              <div className="p-4 text-sm text-gray-500">No values available</div>
-            ) : (
-              <ul
-                ref={listRef}
-                role="listbox"
-                tabIndex={0}
-                className="outline-none"
-                onKeyDown={(e) => {
-                  if (e.key === "ArrowDown") { e.preventDefault(); move(1); }
-                  else if (e.key === "ArrowUp") { e.preventDefault(); move(-1); }
-                  else if (e.key === "Enter") { e.preventDefault(); handleEnter(); }
-                  else if (e.key === "Escape") { e.preventDefault(); onClose(); }
-                }}
-              >
-                {list.map((opt) => {
-                  const active = opt.value === selected;
-                  return (
-                    <li key={opt.value} className="border-b last:border-b-0">
-                      <button
-                        role="option"
-                        aria-selected={active}
-                        className={`w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-gray-50 ${
-                          active ? "bg-indigo-50" : ""
-                        }`}
-                        onClick={() => onPick(opt.value)} // immediate select on click
-                      >
-                        <span
-                          className={`inline-block h-2.5 w-2.5 rounded-full ${
-                            active ? "bg-indigo-600" : "bg-gray-300"
-                          }`}
-                        />
-                        <div className="flex flex-col">
-                          <span className="font-medium">{opt.value}</span>
-                          {opt.label && (
-                            <span className="text-xs text-gray-600">{opt.label}</span>
-                          )}
-                        </div>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </div>
-        </div>
+                {/* add a dash between but not after the last */}
+                {idx < FD_KEYS.length - 1 && <span>-</span>}
+                </span>
+            ))}
+            
+        </div>  
+        {/* Modal */}
+        <dialog
+            ref={dialogRef}
+            className="fixed inset-0 m-auto p-0 w-[26rem] max-w-[95vw] rounded-xl backdrop:bg-black/30"
+            onCancel={(e) => {
+                e.preventDefault();
+                handleClose();
+            }}
+        >
+        {openKey && (
+            <div className="bg-white rounded-xl overflow-hidden shadow-xl">
+                <div className="p-4 border-b flex items-center justify-between">
+                    <h3 className="text-lg font-semibold">{inUse[FD_KEYS.indexOf(openKey)]?.name}</h3>
+                    <button
+                        className="rounded-md px-2 py-1 border hover:bg-gray-50"
+                        onClick={handleClose}
+                    >
+                        Close
+                    </button>
+                </div>
+                <div className="p-4 space-y-3">
+                    <label className="block text-sm text-gray-600 mb-1">
+                        Values for {openKey.toUpperCase()}
+                    </label>
 
-        <div className="p-3 border-t flex justify-end gap-2">
-          <button
-            className="rounded-md px-3 py-2 border hover:bg-gray-50"
-            onClick={handleEnter}
-            disabled={loading || !!err}
-          >
-            Select
-          </button>
-          <button className="rounded-md px-3 py-2 border hover:bg-gray-50" onClick={onClose}>
-            Cancel
-          </button>
-        </div>
-      </div>
-    </dialog>
-  );
+                    <ul className="border rounded divide-y">
+                        {dimensionValues.map((d) => (
+                        <li key={d.record} className="px-3 py-2">
+                            <button
+                                type="button"
+                                className="w-full text-left hover:bg-gray-50 rounded px-2 py-1"
+                                onClick={() => choose(d.code)}
+                                title="Use this value"
+                            >
+                                <span className="font-mono">{d.code}</span> – {d.description}
+                            </button>
+                        </li>
+                        ))}
+                    </ul>
+                </div>
+                <div className="p-4 space-y-3">
+                    <label className="block text-sm text-gray-600 mb-1">
+                        Value for {openKey.toUpperCase()}
+                    </label>
+                    <input
+                        type="text"
+                        className="w-full border rounded px-3 py-2"
+                        value={draft}
+                        onChange={(e) => setDraft(e.target.value)}
+                        placeholder="Enter code (e.g., 01)"
+                        autoFocus
+                        onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleOk();
+                        } else if (e.key === "Escape") {
+                            e.preventDefault();
+                            handleClose();
+                        }
+                        }}
+                    />
+                </div>
+                <div className="p-3 border-t flex justify-end gap-2">
+                    <button
+                        className="rounded-md px-3 py-2 border hover:bg-gray-50"
+                        onClick={handleClose}
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        className="rounded-md px-3 py-2 border bg-indigo-600 text-white hover:bg-indigo-700"
+                        onClick={handleOk}
+                    >
+                        OK
+                    </button>
+                </div>
+          </div>
+        )}
+      </dialog>
+    </>
+    );
 }

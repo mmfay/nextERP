@@ -12,18 +12,37 @@ export type JournalLine = {
 };
 
 export type JournalLineTable = {
-  lineID: number | null;
+  lineID: number;
   journalID: string;
   account: string;
   description?: string;
   debit: number;
   credit: number;
   dimension: number;
+  dimensions: Dimensions;
   companyID: number;
   versionID: number;
   recordID: number;
   isModified?: boolean;
   isNew?: boolean;
+};
+
+export type Dimensions = {
+  fd1?: string | null;
+  fd2?: string | null;
+  fd3?: string | null;
+  fd4?: string | null;
+  fd5?: string | null;
+  fd6?: string | null;
+  fd7?: string | null;
+  fd8?: string | null;
+  recordID: number;
+};
+
+export type FinancialDimension = {
+  id: number;
+  name: string;
+  in_use: boolean;
 };
 
 export type Page<T> = {
@@ -49,7 +68,7 @@ export type GeneralJournal = {
 export type GeneralJournalTransPayload = {
   journalID: string;
   updates: JournalLineTable[];
-  Inserts: JournalLineTable[];
+  inserts: JournalLineTable[];
 };
 
 export type GeneralJournalTransDelete = {

@@ -18,16 +18,18 @@ CREATE TABLE GENERALJOURNALTABLE (
 
 CREATE TABLE GENERALJOURNALTRANS (
 
-    journal_id    VARCHAR(36) NOT NULL,            -- FK to general_journal_header
-    line_id       INT NOT NULL,                    -- line number inside journal
-    account       VARCHAR(50) NOT NULL,            -- GL account number
-    description   TEXT,                            -- optional description
-    debit         NUMERIC(18, 2) DEFAULT 0 NOT NULL,
-    credit        NUMERIC(18, 2) DEFAULT 0 NOT NULL,
-    dimension     INT,
-    company_id    INT NOT NULL,                    -- FK to companies table
-    version_id    INT NOT NULL,
-    record_id     BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY
+    journal_id      VARCHAR(36) NOT NULL,            -- FK to general_journal_header
+    line_id         INT NOT NULL,                    -- line number inside journal
+    account         VARCHAR(50) NOT NULL,            -- GL account number
+    dimension       INT,
+    description     TEXT,                            -- optional description
+    debit           NUMERIC(18, 2) DEFAULT 0 NOT NULL,
+    credit          NUMERIC(18, 2) DEFAULT 0 NOT NULL,
+    offsetAccount   VARCHAR(50),            -- GL account number
+    offsetDimension INT,
+    company_id      INT NOT NULL,                    -- FK to companies table
+    version_id      INT NOT NULL,
+    record_id       BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY
 
 );
 

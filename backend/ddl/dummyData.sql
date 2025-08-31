@@ -203,17 +203,17 @@ VALUES
 
 -- Journal GJ-000200 (Misc, 2025-07-19)
 INSERT INTO GENERALJOURNALTRANS
-(journal_id, line_id, account, description, debit, credit, dimension, company_id, version_id) VALUES
-('GJ-000200', 1, '6000', 'Misc expense', 500.00, 0.00, NULL, 1, 1),
-('GJ-000200', 2, '1000', 'Cash', 0.00, 500.00, NULL, 1, 1),
-('GJ-000199', 1, '1200', 'Prepaid insurance adj', 0.00, 300.00, 1, 1, 1),
-('GJ-000199', 2, '6100', 'Insurance expense adj', 300.00, 0.00, 1, 1, 1),
-('GJ-000198', 1, '7000', 'Wages expense', 2000.00, 0.00, NULL, 1, 1),
-('GJ-000198', 2, '2100', 'Wages payable', 0.00, 2000.00, NULL, 1, 1),
-('GJ-000197', 1, '6200', 'Utilities expense accrual', 400.00, 0.00, NULL, 1, 1),
-('GJ-000197', 2, '2200', 'Accrued liabilities', 0.00, 400.00, NULL, 1, 1),
-('GJ-000196', 1, '1000', 'Opening balance cash', 10000.00, 0.00, NULL, 1, 1),
-('GJ-000196', 2, '3000', 'Opening retained earnings', 0.00, 10000.00, NULL, 1, 1);
+(journal_id, line_id, account, dimension, description, debit, credit, offsetAccount, offsetDimension, company_id, version_id) VALUES
+('GJ-000200', 1, '6000', NULL, 'Misc expense', 500.00, 0.00, NULL, NULL, 1, 1),
+('GJ-000200', 2, '1000', NULL, 'Cash', 0.00, 500.00, NULL, NULL, 1, 1),
+('GJ-000199', 1, '1200', 1, 'Prepaid insurance adj', 0.00, 300.00, '6100', 1, 1, 1),
+('GJ-000199', 2, '6100', 1, 'Insurance expense adj', 300.00, 0.00, '1200', 2, 1, 1),
+('GJ-000198', 1, '7000', NULL, 'Wages expense', 2000.00, 0.00, NULL, NULL, 1, 1),
+('GJ-000198', 2, '2100', NULL, 'Wages payable', 0.00, 2000.00, NULL, NULL, 1, 1),
+('GJ-000197', 1, '6200', NULL, 'Utilities expense accrual', 400.00, 0.00, NULL, NULL, 1, 1),
+('GJ-000197', 2, '2200', NULL, 'Accrued liabilities', 0.00, 400.00, NULL, NULL, 1, 1),
+('GJ-000196', 1, '1000', NULL, 'Opening balance cash', 10000.00, 0.00, NULL, NULL, 1, 1),
+('GJ-000196', 2, '3000', NULL, 'Opening retained earnings', 0.00, 10000.00, NULL, NULL, 1, 1);
 
 INSERT INTO FINANCIALDIMENSIONS (id, name, in_use, company_id) VALUES
 (1, 'Department', TRUE, 1),

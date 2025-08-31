@@ -1,4 +1,4 @@
-export type JournalLine = {
+export type GeneralJournalTrans = {
   lineID: number;
   journalID: string;
   account: string;
@@ -11,7 +11,7 @@ export type JournalLine = {
   recordID: number;
 };
 
-export type JournalLineTable = {
+export type GeneralJournalTransLines = {
   lineID: number;
   journalID: string;
   account: string;
@@ -20,6 +20,9 @@ export type JournalLineTable = {
   credit: number;
   dimension: number;
   dimensions: Dimensions;
+  offsetAccount?: string;
+  offsetDimension?: number;
+  offsetDimensions?: Dimensions;
   companyID: number;
   versionID: number;
   recordID: number;
@@ -45,15 +48,6 @@ export type FinancialDimension = {
   in_use: boolean;
 };
 
-export type Page<T> = {
-  items: T[];
-  has_next: boolean;
-  has_prev: boolean;
-  next_cursor?: string | null;
-  prev_cursor?: string | null;
-  limit: number;
-};
-
 export type GeneralJournal = {
   journalID: string;
   document_date: string;   
@@ -67,8 +61,8 @@ export type GeneralJournal = {
 
 export type GeneralJournalTransPayload = {
   journalID: string;
-  updates: JournalLineTable[];
-  inserts: JournalLineTable[];
+  updates: GeneralJournalTransLines[];
+  inserts: GeneralJournalTransLines[];
 };
 
 export type GeneralJournalTransDelete = {

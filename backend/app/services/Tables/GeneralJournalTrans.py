@@ -55,7 +55,7 @@ class GeneralJournalTrans:
         # Limit placeholder
         limit_placeholder = f"${idx}"
         params.append(limit + 1)  # +1 to detect has_next
-        print(limit_placeholder)
+    
         sql = f"""
             SELECT
 
@@ -256,17 +256,19 @@ class GeneralJournalTrans:
         
         sql = """
             INSERT INTO GENERALJOURNALTRANS
-                (journal_id, account, description, debit, credit, dimension, company_id, line_id, version_id)
+                (journal_id, account, dimension, description, debit, credit, offsetAccount, offsetDimension, company_id, line_id, version_id)
             VALUES
-                ($1, $2, $3, $4, $5, $6, $7, COALESCE((SELECT MAX(line_id)+1 from GENERALJOURNALTRANS WHERE company_id = $7 and journal_id = $9),1), $8)
+                ($1, $2, $3, $4, $5, $6, $7, $8, $9, COALESCE((SELECT MAX(line_id)+1 from GENERALJOURNALTRANS WHERE company_id = $9 and journal_id = $11),1), $10)
             RETURNING
                 line_id     AS "lineID",
                 journal_id  AS "journalID",
                 account,
+                dimension,
                 description,
                 debit,
                 credit,
-                dimension,
+                offsetAccount AS "offsetAccount",
+                offsetDimension AS "offsetDimension",
                 company_id AS "companyID",
                 version_id AS "versionID",
                 record_id  AS "recordID";
@@ -279,13 +281,23 @@ class GeneralJournalTrans:
         if (dimension < 0):
             dimension = await FinancialDimensionCombos.findOrCreate(record.dimensions)
 
+        # get the dimension
+        offsetDimension = record.offsetDimension
+
+        # if its less than 0, it has been modified or is new. check the dimensions and return correct one.
+        if (offsetDimension is not None):
+            if (offsetDimension < 0):
+                offsetDimension = await FinancialDimensionCombos.findOrCreate(record.offsetDimensions)
+
         row = await DB.fetch_one(sql, [
             record.journalID,
             record.account,
+            dimension,
             record.description,
             record.debit,
             record.credit,
-            dimension,
+            record.offsetAccount,
+            offsetDimension,
             1,
             1,
             record.journalID,

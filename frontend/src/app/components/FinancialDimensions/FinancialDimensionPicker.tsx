@@ -96,29 +96,36 @@ export default function FDPicker({
         setOpenKey(null);        
     };
 
+    
     return (
         <>
         <div>
-            {FD_KEYS.map((key, idx) => (
-                
-                <span key={key} className="inline-flex items-center">
-                <button
-                    type="button"
-                    className={
-                    `w-full h-9 rounded-md px-2 text-sm transition 
-                    ${!disabled
-                        ? "bg-white dark:bg-gray-900/40 border border-gray-300 dark:border-gray-700 hover:border-blue-400 focus:border-blue-500 focus:outline-none"
-                        : "bg-transparent border border-transparent opacity-60 pointer-events-none"}`
-                } 
-                    onClick={() => handleOpen(key)}
-                    disabled={!inUse[idx]?.in_use}
-                >
-                    {pretty(dimensions?.[key])}
-                </button>
-                {/* add a dash between but not after the last */}
-                {idx < FD_KEYS.length - 1 && <span>-</span>}
-                </span>
-            ))}
+  {FD_KEYS.map((key, idx) => {
+    // per-dimension enabled (in use) AND globally not disabled
+    const isFDEnabled = !!inUse[idx]?.in_use && !disabled;
+
+    const btnClass =
+      "h-9 rounded-md px-2 text-sm transition border " +
+      (isFDEnabled
+        ? "bg-white dark:bg-gray-900/40 border-gray-300 dark:border-gray-700 hover:border-blue-400 focus:border-blue-500 focus:outline-none cursor-text"
+        : "bg-gray-100 dark:bg-gray-800/50 border-gray-200/70 dark:border-gray-700/50 text-gray-400 cursor-not-allowed");
+
+    return (
+      <span key={key} className="inline-flex items-center">
+        <button
+          type="button"
+          className={btnClass}
+          onClick={() => isFDEnabled && handleOpen(key)}
+          disabled={!isFDEnabled}
+          aria-disabled={!isFDEnabled}
+          title={isFDEnabled ? "Select value" : "Dimension not in use"}
+        >
+          {pretty(dimensions?.[key])}
+        </button>
+        {idx < FD_KEYS.length - 1 && <span className="mx-1 text-gray-400">-</span>}
+      </span>
+    );
+  })}
             
         </div>  
         {/* Modal */}

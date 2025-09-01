@@ -154,11 +154,14 @@ class GeneralJournalTrans(BaseModel):
     # Base Fields for General Jouranl Trans
     journalID: str
     account: str
+    dimension: Optional[int] = None
+    dimensions: Optional[FinancialDimensionCombos] = None
     description: Optional[str] = None
     debit: Decimal
     credit: Decimal
-    dimension: Optional[int] = None
-    dimensions: Optional[FinancialDimensionCombos] = None
+    offsetAccount: Optional[str] = None 
+    offsetDimension: Optional[int] = None
+    offsetDimensions: Optional[FinancialDimensionCombos] = None
 
 class GeneralJournalTransRead(GeneralJournalTrans):
     # When reading from DB, these fields should exist as well.
@@ -178,8 +181,7 @@ class GeneralJournalTransUpdate(GeneralJournalTransRead):
     pass
 
 class GeneralJournalTransWithFinancialDimensionsRead(GeneralJournalTransRead):
-    # Like a join to Financial Dimensions to show the data in its own json list per record.
-    dimensions: Dict[str, Any] = {}
+    pass
 
 class PostingSetup(BaseModel):
     module: int

@@ -7,31 +7,34 @@ import RecordControls from "@/app/components/Buttons/RecordControls";
 import { fetchJournalLines, updateJournalTrans, deleteJournalLine } from "@/lib/api/general_ledger/journalLines";
 import AccountPicker from "@/app/components/FinancialDimensions/AccountPicker";
 import FDPicker from "@/app/components/FinancialDimensions/FinancialDimensionPicker";
-import { JournalLineTable, GeneralJournalTransPayload, GeneralJournalTransDelete, Dimensions} from "@/lib/api/general_ledger/types";
+import { GeneralJournalTransLines, GeneralJournalTransPayload, GeneralJournalTransDelete, Dimensions} from "@/lib/api/general_ledger/types";
 import { fetchJournalHeader } from "@/lib/api/general_ledger/generalJournals";
 
 export default function JournalLinesPage() {
 
-    // parameters from previous page
-    const journalID                     = useSearchParams().get("id")!;
+    // parameters and journal data
+    const journalID                             = useSearchParams().get("id")!;
+    const [isPosted, setIsPosted]               = useState(false);
+    const [lines, setLines]                     = useState<GeneralJournalTransLines[]>([]);
 
-    const [loading, setLoading]         = useState(false); 
-    const [currentIdx, setCurrentIdx]   = useState(0);                  // start index at 0
+    // pagination variables
+    const [loading, setLoading]                 = useState(false); 
+    const [currentIdx, setCurrentIdx]           = useState(0);                  // start index at 0
+    const hasPrev                               = currentIdx > 0;               // if moved forward, has prev is greater than 0.
+    const [pageNextCursors, setPageNextCursors] = useState<(string | null)[]>([]);
+    const [hasNext, setHasNext]                 = useState(false);
+    const [requestCursors, setRequestCursors]   = useState<(string | null)[]>([null]);      // hold cursors so we can navigate.
 
-    const hasPrev                       = currentIdx > 0;               // if moved forward, has prev is greater than 0.
-    const hasNext                       = true;                         // true if next page, false if not.
-    const nextCursor                    = "1234";
+    // row selection variables
+    const [selected, setSelected]               = useState<Set<number>>(new Set()); // tracks which rows are selected.
+    const masterRef                             = useRef<HTMLInputElement>(null);
+    const visibleIds                            = useMemo(() => lines.map(l => l.lineID), [lines])
+    const selectedLines                         = useMemo(() => lines.filter(l => selected.has(l.lineID)),[lines, selected]);
+    const allSelected                           = visibleIds.length > 0 && visibleIds.every(id => selected.has(id));
+    const someSelected                          = selected.size > 0 && !allSelected;
 
-    const [isPosted, setIsPosted]       = useState(false);
-    const [lines, setLines]             = useState<JournalLineTable[]>([]);
-    const [selected, setSelected]       = useState<Set<number>>(new Set()); // tracks which rows are selected.
-    const masterRef                     = useRef<HTMLInputElement>(null);
-    const visibleIds                    = useMemo(() => lines.map(l => l.lineID), [lines])
-    const selectedLines                 = useMemo(() => lines.filter(l => selected.has(l.lineID)),[lines, selected]);
-    const allSelected                   = visibleIds.length > 0 && visibleIds.every(id => selected.has(id));
-    const someSelected                  = selected.size > 0 && !allSelected;
-
-    type EditableKey                    = "account" | "description" | "debit" | "credit";
+    // fields that can be modified.
+    type EditableKey                    = "account" | "description" | "debit" | "credit" | "offsetAccount";
 
     // run when journalId changes, which should be everytime the page is loaded
     useEffect(() => {
@@ -44,6 +47,7 @@ export default function JournalLinesPage() {
         }
     }, [journalID]);
 
+    // run when rows selected
     useEffect(() => {
         if (masterRef.current) masterRef.current.indeterminate = someSelected;
     }, [someSelected]);
@@ -66,52 +70,84 @@ export default function JournalLinesPage() {
     // when page is accessed, loadfirst page is fired off, gets first 'x' amount of records from database. 
     const loadFirstPage = async () => {
 
-        setLoading(true);
-
         try {
-
+            // fetch journal lines and its header.
             const page = await fetchJournalLines(journalID, { limit: 20 });
             const header = await fetchJournalHeader(journalID);
-            setLines(page.items);
+
+            // this will drive if the form is editable or not. 
             setIsPosted(header.status == "draft" ? false : true);
+
+            // set the lines, if there is a next page and cursor for the next page.
+            setRequestCursors([null]);
+            setLines(page.items);
+            setHasNext(page.has_next);
+            setPageNextCursors(page.next_cursor ?? null);   
+            setCurrentIdx(0);       
 
         } catch (err) {
             console.error("Failed to laod first page", err);
         } finally {
-            setCurrentIdx(0);
             setLoading(false);
         }
+        setLoading(true);
 
         setTimeout(() => {
-            setCurrentIdx(0);
             setLoading(false);
         }, 500);
 
     };
 
     // used to navigate previous page.
-    const loadPrev = () => {
+    const loadPrev = async () => {
 
         if (!hasPrev) return;
 
+        try {
+            const prevCursor = requestCursors[currentIdx - 1]; // cursor that produced the previous page
+            const page = await fetchJournalLines(journalID, { limit: 20, nextCursor: prevCursor });
+            setLines(page.items);
+            setCurrentIdx(i => i - 1);
+            setPageNextCursors(page.next_cursor ?? null);  // forward cursor from the page we just fetched
+            setHasNext(page.has_next);
+        } catch (err) {
+            console.error("Error retrieving previous page", err);
+        } finally {
+            setLoading(false);
+        }
         setLoading(true);
 
         setTimeout(() => {
-            setCurrentIdx((prev) => prev - 1);
             setLoading(false);
         }, 500);
 
     };
 
     // used to navigate next page.
-    const loadNext = () => {
+    const loadNext = async () => {
 
         if (!hasNext) return;
 
+        try {
+            const page = await fetchJournalLines(journalID, { limit: 20, nextCursor: pageNextCursors });
+            setLines(page.items);
+            // set current index and save previous index.
+            setCurrentIdx((i) => {
+                const newIdx = i + 1;
+                
+                setRequestCursors(prev => [...prev, pageNextCursors]);
+                return newIdx;
+            });
+            setPageNextCursors(page.next_cursor ?? null);
+            setHasNext(page.has_next);
+        } catch (err) {
+            console.error("Error retrieving next page", err);
+        } finally {
+            setLoading(false);
+        }
         setLoading(true);
 
         setTimeout(() => {
-            setCurrentIdx((prev) => prev + 1);
             setLoading(false);
         }, 500);
 
@@ -191,7 +227,6 @@ export default function JournalLinesPage() {
 
         const inserts = lines.filter(l => !!l.isNew);
         const updates = lines.filter(l => !l.isNew && !!l.isModified);
-        
         const payload: GeneralJournalTransPayload = {
             journalID,
             updates,
@@ -212,6 +247,7 @@ export default function JournalLinesPage() {
 
     // Generic setter the picker (or anything) can call
     const setField = (lineID: number, key: EditableKey, value: string | number | "") => {
+    
         setLines(prev =>
             prev.map(l =>
             l.lineID === lineID ? { ...l, [key]: value, isModified: true } : l
@@ -255,9 +291,27 @@ export default function JournalLinesPage() {
         setLines(updatedLines);
     };
 
+    const handleOffsetDimensionChange = (key: keyof Dimensions, value: string | null | undefined, lineID: number) => {
+        const updatedLines = lines.map(l =>
+            l.lineID === lineID
+                ? {
+                    ...l,
+                    offsetDimensions: {
+                    ...l.offsetDimensions,
+                    [key]: value,   // overwrite fd key passed.
+                    },
+                    offsetDimension: -1,
+                    isModified: true
+                }
+                : l
+        );
+        
+        setLines(updatedLines);
+    };
+
     return (
         <div className="min-h-screen bg-inherit text-inherit font-[family-name:var(--font-geist-sans)] flex flex-col items-center">
-            <main className="pt-24 px-4 sm:px-16 w-full max-w-6xl space-y-4">
+            <main className="pt-24 px-4 md:px-8 w-full max-w-[1600px] 2xl:max-w-[1800px] space-y-4">
                 <div className="sticky top-20 z-20 bg-inherit border-b border-black/10 dark:border-white/10">
                     <div className="py-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <h2 className="text-2xl font-semibold">Journal: {journalID}</h2>
@@ -275,7 +329,7 @@ export default function JournalLinesPage() {
                             currentPage={currentIdx}
                             hasPrev={hasPrev}
                             hasNext={hasNext}
-                            nextCursor={nextCursor}
+                            nextCursor={pageNextCursors}
                             onRefresh={loadFirstPage}
                             onPrev={loadPrev}
                             onNext={loadNext}
@@ -283,91 +337,126 @@ export default function JournalLinesPage() {
                     </div>
                 </div>
                 {/* Table */}
-                <div className="max-h-[70vh] overflow-auto">
-                    <table className="w-full table-auto">
-                        <thead className="sticky top-0 z-10 bg-gray-200 dark:bg-gray-800 text-gray-900 dark:text-white">
-                            <tr>
-                                <th className="px-4 py-2 border-b w-12">
-                                <input
-                                    type="checkbox"
-                                    className="form-checkbox h-4 w-4 text-blue-600"
-                                    ref={masterRef}
-                                    checked={allSelected}
-                                    onChange={(e) => toggleAll(e.target.checked)}
-                                    disabled={isPosted}
-                                />
-                                </th>
-                                <th className="border-b px-2 py-2 text-right">Line</th>
-                                <th className="border-b px-4 py-2">Account</th>
-                                <th className="border-b px-4 py-2">Financial Dimensions</th>
-                                <th className="border-b px-4 py-2">Description</th>
-                                <th className="border-b px-4 py-2 text-right">Debit</th>
-                                <th className="border-b px-4 py-2 text-right">Credit</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {lines.map((line) => (
-                                <tr key={line.lineID} className={line.isNew ? "bg-emerald-50 dark:bg-emerald-900/15" : line.isModified ? "bg-amber-50 dark:bg-amber-900/15" : ""}>
-                                <td className="px-4 py-2 border-b w-12">
-                                    <input 
-                                        type="checkbox"
-                                        className="form-checkbox h-4 w-4 text-blue-600"
-                                        checked={selected.has(line.lineID)}
-                                        onChange={() => toggleOne(line.lineID)}
-                                        disabled={isPosted}
-                                    />
-                                </td>
-                                <td className="px-2 py-2 border-b text-right">{line.lineID < 0 ? null : line.lineID}</td>
-                                <td className="px-4 py-2 border-b">
-                                    <AccountPicker
-                                        label={line.account}
-                                        onSelect={(acc) => setField(line.lineID, "account", acc.account)}
-                                        disabled={isPosted}
-                                    />
-                                </td>
-                                <td className="px-4 py-2 border-b">
-                                    <FDPicker
-                                        recordID={line.lineID}
-                                        dimensions={line.dimensions}
-                                        onClick={handleDimensionChange}
-                                    />
-                                </td>
-                                <td className="px-4 py-2 border-b">
-                                    <input
-                                        type="text"
-                                        className={`text-left w-full bg-transparent outline-none ${isPosted ? "pointer-events-none" : ""}`}
-                                        value={line.description}
-                                        onChange={updateField(line.lineID, "description")}
-                                        disabled={isPosted}
-                                        aria-readonly={isPosted}
-                                    />
-                                </td>
-                                <td className="px-4 py-2 border-b text-right">
-                                    <input
-                                        type="number"
-                                        step="0.01"
-                                        className={`text-right w-full bg-transparent outline-none ${isPosted ? "pointer-events-none" : ""}`}
-                                        value={line.debit}
-                                        onChange={updateField(line.lineID, "debit")}
-                                        disabled={isPosted}
-                                        aria-readonly={isPosted}
-                                    />
-                                </td>
-                                <td className="px-4 py-2 border-b text-right">
-                                    <input
-                                        type="number"
-                                        step="0.01"
-                                        className={`text-right w-full bg-transparent outline-none ${isPosted ? "pointer-events-none" : ""}`}
-                                        value={line.credit}
-                                        onChange={updateField(line.lineID, "credit")}
-                                        disabled={isPosted}
-                                        aria-readonly={isPosted}
-                                    />
-                                </td>
+                <div className="rounded-lg border border-black/20 shadow-sm">
+                    <div className="max-h-[70vh] overflow-auto">
+                        <table className="w-full table-auto">
+                            <thead className="sticky top-0 z-10 bg-gray-200 dark:bg-gray-800 text-gray-900 dark:text-white">
+                                <tr>
+                                    <th className="px-4 py-2 border-b w-12">
+                                        <input
+                                            type="checkbox"
+                                            className="form-checkbox h-4 w-4 text-blue-600"
+                                            ref={masterRef}
+                                            checked={allSelected}
+                                            onChange={(e) => toggleAll(e.target.checked)}
+                                            disabled={isPosted}
+                                        />
+                                    </th>
+                                    <th className="border-b px-2 py-2 text-right">Line</th>
+                                    <th className="border-b px-4 py-2">Account</th>
+                                    <th className="border-b px-4 py-2">Dimensions</th>
+                                    <th className="border-b px-4 py-2">Description</th>
+                                    <th className="border-b px-4 py-2 text-right">Debit</th>
+                                    <th className="border-b px-4 py-2 text-right">Credit</th>
+                                    <th className="border-b px-4 py-2">Offset Account</th>
+                                    <th className="border-b px-4 py-2">Offset Dimensions</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {lines.map((line) => (
+                                    <tr key={line.lineID} className={line.isNew ? "bg-emerald-50 dark:bg-emerald-900/15" : line.isModified ? "bg-amber-50 dark:bg-amber-900/15" : ""}>
+                                    <td className="px-4 py-2 border-b w-12">
+                                        <input 
+                                            type="checkbox"
+                                            className="form-checkbox h-4 w-4 text-blue-600"
+                                            checked={selected.has(line.lineID)}
+                                            onChange={() => toggleOne(line.lineID)}
+                                            disabled={isPosted}
+                                        />
+                                    </td>
+                                    <td className="px-2 py-2 border-b text-right">{line.lineID < 0 ? null : line.lineID}</td>
+                                    <td className="px-4 py-2 border-b">
+                                        <AccountPicker
+                                            label={line.account}
+                                            onSelect={(acc) => setField(line.lineID, "account", acc.account)}
+                                            disabled={isPosted}
+                                        />
+                                    </td>
+                                    <td className="px-4 py-2 border-b">
+                                        <FDPicker
+                                            recordID={line.lineID}
+                                            dimensions={line.dimensions}
+                                            onClick={handleDimensionChange}
+                                            disabled={isPosted}
+                                        />
+                                    </td>
+                                    <td className="px-4 py-2 border-b">
+                                        <input
+                                            type="text"
+                                            className={
+                                                `w-full h-9 rounded-md px-2 text-sm transition 
+                                                ${!isPosted
+                                                    ? "bg-white dark:bg-gray-900/40 border border-gray-300 dark:border-gray-700 hover:border-blue-400 focus:border-blue-500 focus:outline-none"
+                                                    : "bg-transparent border border-transparent opacity-60 pointer-events-none"}`
+                                            }
+                                            value={line.description}
+                                            onChange={updateField(line.lineID, "description")}
+                                            disabled={isPosted}
+                                            aria-readonly={isPosted}
+                                        />
+                                    </td>
+                                    <td className="px-4 py-2 border-b text-right">
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            className={
+                                                `w-full h-9 rounded-md px-2 text-sm transition 
+                                                ${!isPosted
+                                                    ? "bg-white dark:bg-gray-900/40 border border-gray-300 dark:border-gray-700 hover:border-blue-400 focus:border-blue-500 focus:outline-none"
+                                                    : "bg-transparent border border-transparent opacity-60 pointer-events-none"}`
+                                            }
+                                            value={line.debit}
+                                            onChange={updateField(line.lineID, "debit")}
+                                            disabled={isPosted}
+                                            aria-readonly={isPosted}
+                                        />
+                                    </td>
+                                    <td className="px-4 py-2 border-b text-right">
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            className={
+                                                `w-full h-9 rounded-md px-2 text-sm transition 
+                                                ${!isPosted
+                                                    ? "bg-white dark:bg-gray-900/40 border border-gray-300 dark:border-gray-700 hover:border-blue-400 focus:border-blue-500 focus:outline-none"
+                                                    : "bg-transparent border border-transparent opacity-60 pointer-events-none"}`
+                                            }
+                                            value={line.credit}
+                                            onChange={updateField(line.lineID, "credit")}
+                                            disabled={isPosted}
+                                            aria-readonly={isPosted}
+                                        />
+                                    </td>
+                                    <td className="px-4 py-2 border-b">
+                                        <AccountPicker
+                                            label={line.offsetAccount}
+                                            onSelect={(acc) => setField(line.lineID, "offsetAccount", acc.account)}
+                                            disabled={isPosted}
+                                        />
+                                    </td>
+                                    <td className="px-4 py-2 border-b">
+                                        <FDPicker
+                                            recordID={line.lineID}
+                                            dimensions={line.offsetDimensions}
+                                            onClick={handleOffsetDimensionChange}
+                                            disabled={isPosted}
+                                        />
+                                    </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </main>
         </div>

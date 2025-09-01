@@ -1,13 +1,14 @@
 // lib/api/journalLines.ts
 import { Page } from "../shared/pagination/types";
-import { JournalLine, GeneralJournalTransPayload, GeneralJournalTransDelete } from "./types";
+import { GeneralJournalTransLines, GeneralJournalTransPayload, GeneralJournalTransDelete } from "./types";
+
 /**
  * Fetch all lines for a journal
  */
 export async function fetchJournalLines(
     journalId: string,
-    opts: { limit?: number; nextCursor?: string | null } = {}
-): Promise<Page<JournalLine>> {
+    opts: { limit?: number; nextCursor?: string | null} = {}
+): Promise<Page<GeneralJournalTransLines>> {
 
     const { limit = 50, nextCursor = null } = opts;
 
@@ -28,7 +29,7 @@ export async function fetchJournalLines(
       );
     }
 
-    const data = (await res.json()) as Page<JournalLine>;
+    const data = (await res.json()) as Page<GeneralJournalTrans>;
 
     return data;
 }

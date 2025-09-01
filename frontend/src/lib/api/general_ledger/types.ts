@@ -1,16 +1,3 @@
-export type GeneralJournalTrans = {
-  lineID: number;
-  journalID: string;
-  account: string;
-  description?: string;
-  debit: number;
-  credit: number;
-  dimension: number;
-  companyID: number;
-  versionID: number;
-  recordID: number;
-};
-
 export type GeneralJournalTransLines = {
   lineID: number;
   journalID: string;
@@ -20,9 +7,9 @@ export type GeneralJournalTransLines = {
   credit: number;
   dimension: number;
   dimensions: Dimensions;
-  offsetAccount?: string;
-  offsetDimension?: number;
-  offsetDimensions?: Dimensions;
+  offsetAccount: string;
+  offsetDimension: number;
+  offsetDimensions: Dimensions;
   companyID: number;
   versionID: number;
   recordID: number;

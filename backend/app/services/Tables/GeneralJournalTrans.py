@@ -55,7 +55,7 @@ class GeneralJournalTrans:
         # Limit placeholder
         limit_placeholder = f"${idx}"
         params.append(limit + 1)  # +1 to detect has_next
-
+        print(limit_placeholder)
         sql = f"""
             SELECT
 
@@ -67,18 +67,33 @@ class GeneralJournalTrans:
                 T.credit,
                 T.dimension,
                 jsonb_strip_nulls(
-                jsonb_build_object(
-                    'fd1', FDC.fd1,
-                    'fd2', FDC.fd2,
-                    'fd3', FDC.fd3,
-                    'fd4', FDC.fd4,
-                    'fd5', FDC.fd5,
-                    'fd6', FDC.fd6,
-                    'fd7', FDC.fd7,
-                    'fd8', FDC.fd8,
-                    'recordID', FDC.record_id
-                    )
-                )                   AS DIMENSIONS,
+                    jsonb_build_object(
+                        'fd1', FDC.fd1,
+                        'fd2', FDC.fd2,
+                        'fd3', FDC.fd3,
+                        'fd4', FDC.fd4,
+                        'fd5', FDC.fd5,
+                        'fd6', FDC.fd6,
+                        'fd7', FDC.fd7,
+                        'fd8', FDC.fd8,
+                        'recordID', FDC.record_id
+                        )
+                )                   AS "dimensions",
+                T.offsetAccount     AS "offsetAccount",
+                T.offsetDimension   AS "offsetDimension",
+                jsonb_strip_nulls(
+                    jsonb_build_object(
+                        'fd1', FDC2.fd1,
+                        'fd2', FDC2.fd2,
+                        'fd3', FDC2.fd3,
+                        'fd4', FDC2.fd4,
+                        'fd5', FDC2.fd5,
+                        'fd6', FDC2.fd6,
+                        'fd7', FDC2.fd7,
+                        'fd8', FDC2.fd8,
+                        'recordID', FDC.record_id
+                        )
+                )                   AS "offsetDimensions",
                 T.company_id      AS "companyID",
                 T.version_id      AS "versionID",
                 T.record_id       AS "recordID"
@@ -86,13 +101,14 @@ class GeneralJournalTrans:
             FROM GENERALJOURNALTRANS T
             LEFT JOIN FINANCIALDIMENSIONCOMBOS FDC
                 ON FDC.record_id = T.dimension
+            LEFT JOIN FINANCIALDIMENSIONCOMBOS FDC2
+                ON FDC2.record_id = T.offsetDimension
             {where_clause}
             ORDER BY T.record_id DESC
             LIMIT {limit_placeholder};
         """
 
         rows = await DB.fetch_all(sql, tuple(params))
-        print(rows)
         has_next = len(rows) > limit
         rows = rows[:limit]
 
@@ -115,7 +131,7 @@ class GeneralJournalTrans:
     
     @staticmethod
     async def findByJournalID(journal_id: str) -> List[GeneralJournalTransRead]:
-        print(journal_id)
+        
         """
         Return all journal lines for the given journal ID from the database.
         If no lines exist, returns an empty list.
@@ -141,7 +157,7 @@ class GeneralJournalTrans:
             ORDER BY line_id ASC;
         """
         rows = await DB.fetch_all(sql, (journal_id,))
-
+    
         return [GeneralJournalTransRead(**dict(r)) for r in rows]
 
     @staticmethod
@@ -178,12 +194,14 @@ class GeneralJournalTrans:
                 debit = $3,
                 credit = $4,
                 dimension = $5,
+                offsetAccount = $6,
+                offsetDimension = $7,
                 version_id = version_id + 1
             WHERE 
-                record_id = $6 
-                and journal_id = $7 
-                and company_id = $8
-                and version_id = $9
+                record_id = $8 
+                and journal_id = $9 
+                and company_id = $10
+                and version_id = $11
             RETURNING 
                 line_id as "lineID", 
                 journal_id as "journalID", 
@@ -192,6 +210,8 @@ class GeneralJournalTrans:
                 debit, 
                 credit, 
                 dimension, 
+                offsetAccount,
+                offsetDimension,
                 company_id as "companyID", 
                 version_id as "versionID",
                 record_id as "recordID";
@@ -204,12 +224,22 @@ class GeneralJournalTrans:
         if (dimension < 0):
             dimension = await FinancialDimensionCombos.findOrCreate(record.dimensions)
 
+        # get the dimension
+        offsetDimension = record.offsetDimension
+
+        # if its less than 0, it has been modified or is new. check the dimensions and return correct one.
+        if (offsetDimension is not None):
+            if (offsetDimension < 0):
+                offsetDimension = await FinancialDimensionCombos.findOrCreate(record.offsetDimensions)
+
         row = await DB.fetch_one(sql, [
             record.account,
             record.description,
             record.debit,
             record.credit,
             dimension,
+            record.offsetAccount,
+            offsetDimension,
             record.recordID,
             record.journalID,
             record.companyID,
@@ -247,7 +277,6 @@ class GeneralJournalTrans:
 
         # if its less than 0, it has been modified or is new. check the dimensions and return correct one.
         if (dimension < 0):
-            print(record.dimensions)
             dimension = await FinancialDimensionCombos.findOrCreate(record.dimensions)
 
         row = await DB.fetch_one(sql, [

@@ -12,7 +12,7 @@ export type PaginationControlsProps = {
   currentPage: number;
   hasPrev: boolean;
   hasNext: boolean;
-  nextCursor?: number | null;
+  nextCursor?: string | null;
   onRefresh: () => void;
   onPrev: () => void;
   onNext: () => void;

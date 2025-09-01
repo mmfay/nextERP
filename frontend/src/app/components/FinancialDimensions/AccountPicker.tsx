@@ -47,7 +47,14 @@ export default function AccountPicker({
 
     return (
         <>
-            <button className="w-40 h-5" onClick={openModal}>
+            <button                                             
+                className={
+                    `w-full h-9 rounded-md px-2 text-sm transition 
+                    ${!disabled
+                        ? "bg-white dark:bg-gray-900/40 border border-gray-300 dark:border-gray-700 hover:border-blue-400 focus:border-blue-500 focus:outline-none"
+                        : "bg-transparent border border-transparent opacity-60 pointer-events-none"}`
+                } 
+                onClick={openModal}>
             {label}
             </button>
             {open && (

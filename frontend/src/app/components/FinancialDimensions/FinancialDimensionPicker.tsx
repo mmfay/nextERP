@@ -7,19 +7,20 @@ import { fetchDimensionValues } from "@/lib/api/general_ledger/financialDimensio
 
 type FDPickerProps = {
     recordID: number;
-    dimensions: Dimensions;     // "FD1".."FD8"
+    dimensions?: Dimensions;     // "FD1".."FD8"
     onClick?: (key: keyof Dimensions, value: string | null | undefined, record: number) => void;
+    disabled: boolean;
 };
 
 const FD_KEYS = ["fd1","fd2","fd3","fd4","fd5","fd6","fd7","fd8"] as const;
-type FDKey = typeof FD_KEYS[number];
 
 const pretty = (v?: string | null) => (v && v.trim() !== "" ? v : "—");
 
 export default function FDPicker({
     recordID,
     dimensions,
-    onClick
+    onClick,
+    disabled
 }: FDPickerProps) {
 
     const record                    = recordID
@@ -75,7 +76,7 @@ export default function FDPicker({
     }, [openKey, optionsByKey]);
 
     const handleOpen = async (key: (typeof FD_KEYS)[number]) => {
-        setDraft(dimensions[key] ?? ""); // seed with current value
+        setDraft(dimensions?.[key] ?? ""); // seed with current value
         setOpenKey(key);
     };
 
@@ -103,11 +104,16 @@ export default function FDPicker({
                 <span key={key} className="inline-flex items-center">
                 <button
                     type="button"
-                    className="px-1 underline decoration-dotted hover:opacity-80"
+                    className={
+                    `w-full h-9 rounded-md px-2 text-sm transition 
+                    ${!disabled
+                        ? "bg-white dark:bg-gray-900/40 border border-gray-300 dark:border-gray-700 hover:border-blue-400 focus:border-blue-500 focus:outline-none"
+                        : "bg-transparent border border-transparent opacity-60 pointer-events-none"}`
+                } 
                     onClick={() => handleOpen(key)}
                     disabled={!inUse[idx]?.in_use}
                 >
-                    {pretty(dimensions[key])}
+                    {pretty(dimensions?.[key])}
                 </button>
                 {/* add a dash between but not after the last */}
                 {idx < FD_KEYS.length - 1 && <span>-</span>}

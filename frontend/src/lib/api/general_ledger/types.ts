@@ -7,9 +7,9 @@ export type GeneralJournalTransLines = {
   credit: number;
   dimension: number;
   dimensions: Dimensions;
-  offsetAccount: string;
-  offsetDimension: number;
-  offsetDimensions: Dimensions;
+  offsetAccount?: string;
+  offsetDimension?: number;
+  offsetDimensions?: Dimensions;
   companyID: number;
   versionID: number;
   recordID: number;

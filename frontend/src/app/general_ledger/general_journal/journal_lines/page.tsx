@@ -16,6 +16,7 @@ export default function JournalLinesPage() {
     const journalID                             = useSearchParams().get("id")!;
     const [isPosted, setIsPosted]               = useState(false);
     const [lines, setLines]                     = useState<GeneralJournalTransLines[]>([]);
+    const [pageData, setPageData]               = useState<GeneralJournalTransLines[][]>([]);
 
     // pagination variables
     const [loading, setLoading]                 = useState(false); 
@@ -74,6 +75,9 @@ export default function JournalLinesPage() {
             // fetch journal lines and its header.
             const page = await fetchJournalLines(journalID, { limit: 20 });
             const header = await fetchJournalHeader(journalID);
+        
+            // add to cache 
+            setPageData([page.items]);
 
             // this will drive if the form is editable or not. 
             setIsPosted(header.status == "draft" ? false : true);
@@ -82,7 +86,7 @@ export default function JournalLinesPage() {
             setRequestCursors([null]);
             setLines(page.items);
             setHasNext(page.has_next);
-            setPageNextCursors(page.next_cursor ?? null);   
+            setPageNextCursors([page.next_cursor ?? null]);   
             setCurrentIdx(0);       
 
         } catch (err) {
@@ -103,12 +107,22 @@ export default function JournalLinesPage() {
 
         if (!hasPrev) return;
 
+        // check cache
+        const cached = pageData[currentIdx - 1];
+        if (cached) {
+            setLines(cached);
+            setCurrentIdx(i => i - 1);
+            setHasNext(!!pageNextCursors[currentIdx - 1]);
+            return;
+        }
+
         try {
             const prevCursor = requestCursors[currentIdx - 1]; // cursor that produced the previous page
             const page = await fetchJournalLines(journalID, { limit: 20, nextCursor: prevCursor });
+
             setLines(page.items);
             setCurrentIdx(i => i - 1);
-            setPageNextCursors(page.next_cursor ?? null);  // forward cursor from the page we just fetched
+            setPageNextCursors([page.next_cursor ?? null]);  // forward cursor from the page we just fetched
             setHasNext(page.has_next);
         } catch (err) {
             console.error("Error retrieving previous page", err);
@@ -127,19 +141,38 @@ export default function JournalLinesPage() {
     const loadNext = async () => {
 
         if (!hasNext) return;
+        
+        // check cache
+        const cached = pageData[currentIdx + 1];
+        if (cached) {
+            setLines(cached);
+            setCurrentIdx(i => i + 1);
+            setHasNext(!!pageNextCursors[currentIdx + 1]);
+            return;
+        }
+        // Otherwise fetch using the cursor stored for the current page
+        const cursor = pageNextCursors[currentIdx];
+        if (!cursor) return; // defensive
 
+        setLoading(true);
         try {
-            const page = await fetchJournalLines(journalID, { limit: 20, nextCursor: pageNextCursors });
-            setLines(page.items);
-            // set current index and save previous index.
-            setCurrentIdx((i) => {
-                const newIdx = i + 1;
-                
-                setRequestCursors(prev => [...prev, pageNextCursors]);
-                return newIdx;
+            const page = await fetchJournalLines(journalID, { limit: 20, nextCursor: cursor });
+
+            setPageData(prev => {
+                const copy = prev.slice();
+                copy[currentIdx + 1] = page.items;
+                return copy;
             });
-            setPageNextCursors(page.next_cursor ?? null);
-            setHasNext(page.has_next);
+
+            setPageNextCursors(prev => {
+                const copy = prev.slice();
+                copy[currentIdx + 1] = page.next_cursor ?? null; // cursor for (currentIdx+2)
+                return copy;
+            });
+
+            setLines(page.items);
+            setCurrentIdx(i => i + 1);
+            setHasNext(!!page.next_cursor);
         } catch (err) {
             console.error("Error retrieving next page", err);
         } finally {
@@ -162,7 +195,7 @@ export default function JournalLinesPage() {
         setLines(prev => {
             const minId = prev.length ? Math.min(...prev.map(l => l.lineID)) : 0;
             const tempId = minId <= 0 ? minId - 1 : -1; // -1, -2, -3...
-            const newRow: JournalLineTable = {
+            const newRow: GeneralJournalTransLines = {
                 lineID: tempId,
                 journalID: journalID,
                 account: "",
@@ -227,6 +260,7 @@ export default function JournalLinesPage() {
 
         const inserts = lines.filter(l => !!l.isNew);
         const updates = lines.filter(l => !l.isNew && !!l.isModified);
+
         const payload: GeneralJournalTransPayload = {
             journalID,
             updates,
@@ -234,6 +268,13 @@ export default function JournalLinesPage() {
         }
 
         if (inserts.length === 0 && updates.length === 0) return;
+
+        const checked = validateValues(payload);
+
+        if (!checked.ok) {
+            alert(checked.errors.join("\n"));
+            return;
+        }
 
         try {
             await updateJournalTrans(payload);
@@ -243,6 +284,57 @@ export default function JournalLinesPage() {
         }
 
 
+    };
+
+    const validateValues = (payload: GeneralJournalTransPayload) => {
+        const errors: string[] = [];
+
+        const check = (rows: typeof payload.inserts) =>
+
+        rows.map((row) => {
+            const debitRaw = row.debit;
+            const creditRaw = row.credit;
+            const descRaw = row.description?.trim() ?? "";
+
+            const debitNum = Number(debitRaw);
+            const creditNum = Number(creditRaw);
+
+            // --- Description must not be blank
+            if (!descRaw) {
+                errors.push(`Line ${row.lineID}: Description is required`);
+            }
+
+            // --- Debit checks
+            if (debitRaw === "" || isNaN(debitNum)) {
+                errors.push(`Line ${row.lineID}: Debit must be a number`);
+            } else if (debitNum < 0) {
+                errors.push(`Line ${row.lineID}: Debit cannot be negative`);
+            }
+
+            // --- Credit checks
+            if (creditRaw === "" || isNaN(creditNum)) {
+                errors.push(`Line ${row.lineID}: Credit must be a number`);
+            } else if (creditNum < 0) {
+                errors.push(`Line ${row.lineID}: Credit cannot be negative`);
+            }
+
+            return {
+                ...row,
+                // normalize valid amounts to 2 decimals
+                debit: !isNaN(debitNum) && debitNum >= 0 ? Math.round(debitNum * 100) / 100 : row.debit,
+                credit: !isNaN(creditNum) && creditNum >= 0 ? Math.round(creditNum * 100) / 100 : row.credit,
+                description: descRaw, // trimmed
+            };
+        });
+
+        const inserts = check(payload.inserts);
+        const updates = check(payload.updates);
+
+        return {
+            ok: errors.length === 0,
+            errors,
+            payload: { ...payload, inserts, updates },
+        };
     };
 
     // Generic setter the picker (or anything) can call

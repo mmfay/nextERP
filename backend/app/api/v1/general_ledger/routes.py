@@ -5,6 +5,7 @@ from .service import *
 from .schemas import *
 from app.classes.Response import SaveResponse
 from app.services.Schemas.Pagination import Page
+
 router = APIRouter()
 
 @router.get("/trial_balance", response_model=list[TrialBalanceEntry])
@@ -129,7 +130,6 @@ async def delete_line(recordID: int, if_match: str | None = Header(default=None)
         raise HTTPException(status_code=428, details="Missing If-Match")
     versionID = int(if_match)
     await delete_journal_line(recordID, versionID)
-
 
 # -----------------------------
 # General Ledger Posting Setup

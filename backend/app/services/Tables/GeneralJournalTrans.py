@@ -8,6 +8,7 @@ from app.classes.Error import Error
 from app.classes.Response import SaveResponse
 from app.services.Tables.FinancialDimensionCombos import FinancialDimensionCombos
 from app.services.cursor import encode_cursor, decode_cursor
+from app.api.v1.shared.session.request_context import get_company_id, get_user_id
 
 def _to_int(val) -> Optional[int]:
     if val is None:
@@ -36,25 +37,29 @@ class GeneralJournalTrans:
         cur = decode_cursor(next_cursor)
         after_record: Optional[int] = _to_int(cur.get("after_rec"))
 
-        params: List[Any] = []
-        idx = 1
+        # $1 - always filter by company id
+        params: List[Any] = [get_company_id()]
+        idx = 2  # next placeholder
 
-        # Always filter by journal_id (first parameter)
-        where_parts = [f"journal_id = ${idx}"]
+        # Build only extra ANDs (no leading WHERE)
+        where_parts: List[str] = []
+
+        # $2 -> journal_id (ALWAYS add this so $2 is typed by the column)
+        where_parts.append(f"T.journal_id = ${idx}")
         params.append(journal_id)
         idx += 1
 
-        # If we have a cursor, page "after" that record_id (for DESC, use <)
+        # $3 -> after_record (optional)
         if after_record is not None:
-            where_parts.append(f"T.record_id < ${idx}")
+            where_parts.append(f"T.record_id < ${idx}")   # DESC keyset
             params.append(after_record)
             idx += 1
 
-        where_clause = "WHERE " + " AND ".join(where_parts)
+        extra_where = (" AND " + " AND ".join(where_parts)) if where_parts else ""
 
-        # Limit placeholder
-        limit_placeholder = f"${idx}"
-        params.append(limit + 1)  # +1 to detect has_next
+        # Next param is LIMIT — cast it to int so PG knows the type
+        limit_placeholder = f"${idx}::int"
+        params.append(limit + 1)
     
         sql = f"""
             SELECT
@@ -91,7 +96,7 @@ class GeneralJournalTrans:
                         'fd6', FDC2.fd6,
                         'fd7', FDC2.fd7,
                         'fd8', FDC2.fd8,
-                        'recordID', FDC.record_id
+                        'recordID', FDC2.record_id
                         )
                 )                   AS "offsetDimensions",
                 T.company_id      AS "companyID",
@@ -103,7 +108,10 @@ class GeneralJournalTrans:
                 ON FDC.record_id = T.dimension
             LEFT JOIN FINANCIALDIMENSIONCOMBOS FDC2
                 ON FDC2.record_id = T.offsetDimension
-            {where_clause}
+            WHERE 
+                1=1
+                AND T.company_id = $1
+                {extra_where}
             ORDER BY T.record_id DESC
             LIMIT {limit_placeholder};
         """
@@ -153,10 +161,13 @@ class GeneralJournalTrans:
                 version_id      AS "versionID",
                 record_id       AS "recordID"
             FROM GENERALJOURNALTRANS
-            WHERE journal_id = $1
+            WHERE 
+                1=1
+                AND journal_id = $1
+                AND company_id = $2
             ORDER BY line_id ASC;
         """
-        rows = await DB.fetch_all(sql, (journal_id,))
+        rows = await DB.fetch_all(sql, (journal_id, get_company_id()))
     
         return [GeneralJournalTransRead(**dict(r)) for r in rows]
 
@@ -186,7 +197,9 @@ class GeneralJournalTrans:
     
     @staticmethod
     async def update(record: GeneralJournalTransUpdate) -> GeneralJournalTransRead:
-
+        """
+        Updates Journal Trans Records
+        """
         sql = """
             UPDATE GENERALJOURNALTRANS
             SET account = $1,
@@ -242,7 +255,7 @@ class GeneralJournalTrans:
             offsetDimension,
             record.recordID,
             record.journalID,
-            record.companyID,
+            get_company_id(),
             record.versionID,
         ])
 
@@ -253,7 +266,9 @@ class GeneralJournalTrans:
     
     @staticmethod
     async def insert(record: GeneralJournalTransUpdate) -> GeneralJournalTransRead:
-        
+        """
+        Inserts Journal Trans Records
+        """
         sql = """
             INSERT INTO GENERALJOURNALTRANS
                 (journal_id, account, dimension, description, debit, credit, offsetAccount, offsetDimension, company_id, line_id, version_id)
@@ -298,7 +313,7 @@ class GeneralJournalTrans:
             record.credit,
             record.offsetAccount,
             offsetDimension,
-            1,
+            get_company_id(),
             1,
             record.journalID,
         ])
@@ -309,14 +324,19 @@ class GeneralJournalTrans:
     
     @staticmethod
     async def delete(recordID: int, versionID: int):
+        """
+        Deletes Journal Trans Records
+        """
         sql = """
             DELETE FROM GENERALJOURNALTRANS
-            WHERE record_id  = $1
-            AND version_id = $2
+            WHERE 
+                AND record_id  = $1
+                AND version_id = $2
+                AND company_id = $3
             RETURNING record_id;
         """
         DB.transaction()
-        row = await DB.fetch_one(sql, [recordID, versionID])
+        row = await DB.fetch_one(sql, [recordID, versionID, get_company_id()])
         if not row:
             raise Error.bad_request("Insert failed", "Could not insert journal line.")
 

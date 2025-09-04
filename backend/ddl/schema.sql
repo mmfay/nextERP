@@ -74,3 +74,19 @@ CREATE UNIQUE INDEX uq_fd_combo_expr ON FINANCIALDIMENSIONCOMBOS (
   (coalesce(fd1,'')), (coalesce(fd2,'')), (coalesce(fd3,'')), (coalesce(fd4,'')),
   (coalesce(fd5,'')), (coalesce(fd6,'')), (coalesce(fd7,'')), (coalesce(fd8,''))
 );
+
+-- server side session data
+CREATE TABLE IF NOT EXISTS SESSIONS (
+  sid           TEXT PRIMARY KEY,                 
+  user_id       VARCHAR(50) NOT NULL,
+  company_id    INTEGER,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  last_seen     TIMESTAMPTZ NOT NULL DEFAULT now(),
+  expires_at    TIMESTAMPTZ NOT NULL              
+);
+
+-- Checking for Expiration
+CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON SESSIONS (expires_at);
+
+-- Query by User
+CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON SESSIONS (user_id);

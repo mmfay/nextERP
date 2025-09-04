@@ -14,6 +14,7 @@ export type AccountCombinationRequest = {
 export async function fetchAccountCombinations(): Promise<AccountCombination[]> {
   const res = await fetch("http://localhost:8000/api/v1/general_ledger/account_combinations", {
     cache: "no-store",
+    credentials: "include"
   });
   if (!res.ok) throw new Error("Failed to fetch account combinations");
   return res.json();
@@ -25,6 +26,7 @@ export async function saveAccountCombinations(data: AccountCombinationRequest[])
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
+    credentials: "include"
   });
   if (!res.ok) throw new Error("Failed to save account combinations");
 }

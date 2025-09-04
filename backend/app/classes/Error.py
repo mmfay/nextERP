@@ -23,3 +23,11 @@ class Error:
             status_code=status.HTTP_409_CONFLICT,
             detail=f"{title}: {detail}"
         )
+    
+    @staticmethod
+    def invalid_credentials(title: str, detail: str):
+        """Use for Invalid Credentials (HTTP 401)."""
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"{title}: {detail}"
+        )

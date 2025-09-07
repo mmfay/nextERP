@@ -9,5 +9,6 @@
     "mod_purch",
     "mod_sales",
     "mod_sysAdmin",
-    "setup_gl"
+    "setup_gl",
+    "journal_post_gl"
 ]

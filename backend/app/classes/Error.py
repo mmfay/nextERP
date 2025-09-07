@@ -31,3 +31,11 @@ class Error:
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"{title}: {detail}"
         )
+    
+    @staticmethod
+    def unprocessable_entity(title: str, detail: str):
+        """Use for Business Rule Violations (HTTP 422)."""
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"{title}: {detail}"
+        )

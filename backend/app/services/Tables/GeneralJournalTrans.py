@@ -182,7 +182,7 @@ class GeneralJournalTrans:
         async with DB.transaction():
             
             # lock the header so that when doing updates, if someone else is in the journal, it makes them wait. 
-            await GeneralJournalTable.recordLock(journal_id, 1)
+            await GeneralJournalTable.recordLock(journal_id)
 
             # updates to existing journal lines, (checks record version)
             for line in updates: 
@@ -330,6 +330,7 @@ class GeneralJournalTrans:
         sql = """
             DELETE FROM GENERALJOURNALTRANS
             WHERE 
+                1=1
                 AND record_id  = $1
                 AND version_id = $2
                 AND company_id = $3

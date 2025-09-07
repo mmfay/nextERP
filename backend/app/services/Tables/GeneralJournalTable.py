@@ -4,11 +4,9 @@ from app.api.v1.general_ledger.schemas import (
     GeneralJournal,
     CreateGeneralJournal
 )
-from datetime import date, datetime
-from app.classes.GeneralJournals import GeneralJournals
 from app.classes.Error import Error
 from app.services.cursor import encode_cursor, decode_cursor
-from app.services.sequences import get_next_id, get_next_record
+from app.api.v1.shared.session.request_context import get_company_id, get_user_id
 
 def _to_int(val) -> Optional[int]:
     if val is None:
@@ -51,6 +49,7 @@ class GeneralJournalTable:
                 description,
                 status,
                 posted,
+                version_id      AS "versionID",
                 company_id    AS "companyID",
                 record_id     AS "recordID"
             FROM GENERALJOURNALTABLE
@@ -95,6 +94,7 @@ class GeneralJournalTable:
                 description,
                 status,
                 posted, 
+                version_id as "versionID",
                 company_id as "companyID",
                 record_id as "recordID"
             FROM GENERALJOURNALTABLE
@@ -103,39 +103,6 @@ class GeneralJournalTable:
         row = await DB.fetch_one(sql, (journal_id,))
         if not row:
             return None
-        return GeneralJournal(**row)
-    
-    @staticmethod
-    async def postJournal(journal_id: str) -> GeneralJournal:
-        """
-        Validate and post a General Journal by updating its status in the DB.
-        Returns the updated journal row as a GeneralJournal model.
-        """
-        # 1) Ensure the journal exists
-        journal = await GeneralJournalHeader.findByJournalID(journal_id)
-        if journal is None:
-            Error.not_found("Journal not found", journal_id)
-
-        # 2) Domain validation (keep as sync if your validator is sync)
-        GeneralJournals.validate(journal_id)
-
-        # 3) Update status and return the updated row
-        sql = """
-            UPDATE GENERALJOURNALTABLE
-               SET status = $1
-             WHERE journal_id = $2
-            RETURNING
-                journal_id   AS "journalID",
-                document_date,
-                type,
-                description,
-                status;
-        """
-        row = await DB.fetch_one(sql, ("posted", journal_id))
-
-        if not row:
-            Error.not_found("Journal not found or could not be updated", journal_id)
-
         return GeneralJournal(**row)
     
     @staticmethod
@@ -184,7 +151,7 @@ class GeneralJournalTable:
         return GeneralJournal(**row)
     
     @staticmethod
-    async def recordLock(journal_id: str, company_id: int):
+    async def recordLock(journal_id: str):
         sql = f"""
             SELECT
                 *
@@ -193,4 +160,53 @@ class GeneralJournalTable:
             FOR UPDATE;
         """
         
-        row = await DB.fetch_one(sql, [journal_id, company_id])
+        row = await DB.fetch_one(sql, [journal_id, get_company_id()])
+
+    @staticmethod
+    async def update(record: GeneralJournal, versionID: int) -> GeneralJournal:
+
+        sql=f"""
+            UPDATE GENERALJOURNALTABLE
+            SET 
+                journal_id          = $1,
+                document_date       = $2,
+                type                = $3,
+                description         = $4,
+                status              = $5,
+                posted              = $6,
+                version_id          = $7,
+                company_id          = $8
+            WHERE 
+                1=1
+                AND record_ID = $9
+                AND version_ID = $10
+                AND company_ID = $11
+            RETURNING 
+                journal_id      AS "journalID"
+                ,document_date
+                ,type
+                ,description
+                ,status
+                ,posted
+                ,version_id     AS "versionID"
+                ,company_id     AS "companyID"
+                ,record_id      AS "recordID";
+        """
+        
+        row = await DB.fetch_one(sql, [
+                                    record.journalID
+                                    ,record.document_date
+                                    ,record.type
+                                    ,record.description
+                                    ,record.status
+                                    ,record.posted
+                                    ,record.versionID + 1
+                                    ,record.companyID
+                                    ,record.recordID
+                                    ,record.versionID
+                                    ,get_company_id()])
+        
+        if not row: 
+            Error.conflict("Error while updating", "An error occurred during update, record may have been updated by another user during update.")
+
+        return GeneralJournal(**row)

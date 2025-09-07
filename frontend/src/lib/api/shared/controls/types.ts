@@ -15,3 +15,4 @@ export type PostControlProps = {
   onPost: () => void;
   onPostDisabled: boolean;
 };
+

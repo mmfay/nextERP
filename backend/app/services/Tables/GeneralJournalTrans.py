@@ -154,9 +154,12 @@ class GeneralJournalTrans:
                 journal_id    AS "journalID",
                 line_id       AS "lineID",
                 account,
+                dimension,
                 description,
                 debit,
                 credit,
+                offsetaccount   AS "offsetAccount",
+                offsetdimension AS "offsetDimension",
                 company_id      AS "companyID",
                 version_id      AS "versionID",
                 record_id       AS "recordID"
@@ -234,8 +237,9 @@ class GeneralJournalTrans:
         dimension = record.dimension
 
         # if its less than 0, it has been modified or is new. check the dimensions and return correct one.
-        if (dimension < 0):
-            dimension = await FinancialDimensionCombos.findOrCreate(record.dimensions)
+        if (dimension):
+            if (dimension < 0):
+                dimension = await FinancialDimensionCombos.findOrCreate(record.dimensions)
 
         # get the dimension
         offsetDimension = record.offsetDimension

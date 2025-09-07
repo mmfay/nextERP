@@ -1,4 +1,5 @@
 from app.classes.DataBaseConnection import DB
+from decimal import Decimal
 from app.classes.Error import Error
 from app.services.Tables.GeneralJournalTrans import GeneralJournalTrans
 from app.services.Tables.GeneralJournalTable import GeneralJournalTable
@@ -13,15 +14,37 @@ class GeneralJournals:
         Validate Journal
         - Validates Journal, making sure records are balanced
         """ 
-        
+
         # get the journal lines
         lines = await GeneralJournalTrans.findByJournalID(journal_id)
 
         # safety to prevent posting of blank journals
         if not lines:
             return ValidationResponse(valid=False, message=f"Cannot post Empty Journal: {journal_id} has no lines")
+        
+        # zip through the lines and check the conditions below
+        for l in lines:
+            debit  = Decimal(l.debit or 0)
+            credit = Decimal(l.credit or 0)
+
+            # a line cant have a negative value
+            if debit < 0 or credit < 0:
+                return ValidationResponse(valid=False, message=f"Line {getattr(l,'lineID',None)}: amounts cannot be negative")
+
+            # a line must have a value
+            if debit == 0 and credit == 0:
+                return ValidationResponse(valid=False, message=f"Line {getattr(l,'lineID',None)}: debit and credit cannot both be zero")
+
+            # a line cant have both a credit and debit
+            if debit > 0 and credit > 0:
+                return ValidationResponse(valid=False, message=f"Line {getattr(l,'lineID',None)}: cannot have both debit and credit > 0")
             
-        # sum credits and debits
+        # make sure no lines are both 0
+        base = [l for l in lines if not l.offsetAccount]
+        total_debits  = sum(Decimal(l.debit or 0)  for l in base)
+        total_credits = sum(Decimal(l.credit or 0) for l in base)
+
+        # sum credits and debits of lines without offset
         total_debits = sum(line.debit for line in lines if not line.offsetAccount)
         total_credits = sum(line.credit for line in lines if not line.offsetAccount)
 

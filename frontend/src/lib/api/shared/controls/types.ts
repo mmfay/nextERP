@@ -7,3 +7,11 @@ export type RecordControlProps = {
   onSave: () => void;
   onSaveDisabled: boolean;
 };
+
+export type PostControlProps = {
+  loading: boolean;
+  onValidate: () => void;
+  onValidateDisabled: boolean;
+  onPost: () => void;
+  onPostDisabled: boolean;
+};

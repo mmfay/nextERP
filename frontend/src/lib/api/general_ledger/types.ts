@@ -43,6 +43,7 @@ export type GeneralJournal = {
   status: string;          
   posted: string | null;  
   companyID: number;
+  versionID: number;
   recordID: number;
 };
 

@@ -95,6 +95,7 @@ class GeneralJournal(BaseModel):
     description: str
     status: str
     posted: Optional[datetime]
+    versionID: int
     companyID: int
     recordID: int
 
@@ -111,19 +112,6 @@ class JournalLine(BaseModel):
     debit: float
     credit: float
 
-class JournalLineNew(BaseModel):
-    lineID: int
-    journalID: str
-    account: str
-    description: Optional[str] = None
-    debit: float
-    credit: float
-    dimension: Optional[int] = None
-    dimensions: Dict[str, Any] = {}
-    companyID: int 
-    recordID: int
-class Config:
-        extra = "ignore"
 # -----------------------------
 # FinancialDimensionCombos
 # -----------------------------

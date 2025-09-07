@@ -1,8 +1,6 @@
 from .schemas import *
-from datetime import datetime, date
-from uuid import uuid4
+from datetime import date
 from typing import List, Optional, Dict, Any
-from fastapi import HTTPException, status
 from app.services.Tables import (
     FinancialDimensionValues, 
     FinancialDimensions, 
@@ -10,14 +8,15 @@ from app.services.Tables import (
     GeneralJournalTable, 
     GeneralJournalTrans
 )
-from app.classes import GeneralJournals
-from app.classes.Response import SaveResponse
+from app.classes.Error import Error
+from app.classes.GeneralJournals import GeneralJournals
+from app.classes.Response import SaveResponse, ValidationResponse
 from app.data.general_ledger.in_memory_store import (
     _account_combinations,
     _gl_entries,
     _posting_setup,
 )
-from app.services.sequences import get_next_id, get_next_record
+
 # -----------------------------
 # Main Accounts
 # -----------------------------
@@ -113,8 +112,11 @@ async def get_general_journals(*, limit: int, next_cursor: Optional[str], prev_c
 async def get_general_journal_by_id(journal_id: str) -> Optional[GeneralJournal]:
     return await GeneralJournalTable.findByJournalID(journal_id)
 
-async def validate_post_journal(journal_id: str) -> GeneralJournal:
-    return await GeneralJournalTable.postJournal(journal_id)
+async def validate_journal(journal_id: str) -> ValidationResponse:
+    return await GeneralJournals.validate(journal_id)
+    
+async def post_journal(journal_id: str, version_id: int) -> ValidationResponse:
+    return await GeneralJournals.post(journal_id, version_id)
 
 async def create_general_journal(data: CreateGeneralJournal) -> GeneralJournal:
     return await GeneralJournalTable.create(data)

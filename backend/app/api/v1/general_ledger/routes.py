@@ -1,13 +1,16 @@
-from fastapi import APIRouter, HTTPException, Query, status, Header
+from fastapi import APIRouter, HTTPException, Query, status, Header, Body
 from typing import Optional
 from datetime import date
-from .service import *
 from .schemas import *
-from app.classes.Response import SaveResponse
+from .service import *
+from app.classes.Response import SaveResponse, ValidationResponse
 from app.services.Schemas.Pagination import Page
 
 router = APIRouter()
 
+# -----------------------------
+# Trial Balance
+# -----------------------------
 @router.get("/trial_balance", response_model=list[TrialBalanceEntry])
 def trial_balance_route(
     from_date: Optional[date] = Query(None),
@@ -15,6 +18,9 @@ def trial_balance_route(
 ):
     return get_trial_balance(from_date, to_date)
 
+# -----------------------------
+# Main Accounts
+# -----------------------------
 @router.get("/main_accounts")
 def main_accounts() -> list[MainAccount]:
     return get_main_accounts()
@@ -33,6 +39,9 @@ def delete_main_accounts(accounts: list[str]):
         raise HTTPException(status_code=404, detail="No accounts deleted")
     return {"deleted": deleted}
 
+# -----------------------------
+# Financial Dimensions
+# -----------------------------
 @router.get("/financial_dimensions", response_model=list[FinancialDimension])
 def get_dimensions():
     return get_financial_dimensions()
@@ -104,9 +113,13 @@ async def get_general_journal(journal_id: str):
         raise HTTPException(status_code=404, detail="Journal not found")
     return journal
 
-@router.patch("/general_journals/{journal_id}", response_model=GeneralJournal)
-async def post_journal(journal_id: str):
-    return await validate_post_journal(journal_id)
+@router.get("/general_journals/{journal_id}/validate", response_model=ValidationResponse)
+async def journal_validation(journal_id: str):
+    return await validate_journal(journal_id)
+
+@router.patch("/general_journals/{journal_id}/post", response_model=ValidationResponse)
+async def journal_post(journal_id: str, versionID: int = Body(..., embed=True)):
+    return await post_journal(journal_id, versionID)
 
 # -----------------------------
 # General Journal Line

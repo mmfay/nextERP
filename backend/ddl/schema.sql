@@ -1,3 +1,6 @@
+-- psql -d myerp -c "\i schema.sql"         -- run the schema script
+-- psql -d myerp -c "\i dummyData.sql"      -- run the dummyData script
+
 DROP TABLE IF EXISTS GENERALJOURNALTABLE;
 DROP TABLE IF EXISTS GENERALJOURNALTRANS;
 DROP TABLE IF EXISTS FINANCIALDIMENSIONS;
@@ -6,14 +9,16 @@ DROP TABLE IF EXISTS FINANCIALDIMENSIONCOMBOS;
 
 CREATE TABLE GENERALJOURNALTABLE (
 
-    journal_id     TEXT   NOT NULL UNIQUE,          -- business id (GJ-000123)
+    journal_id     TEXT   NOT NULL UNIQUE,          
     document_date  DATE   NOT NULL,
-    type           TEXT   NOT NULL,                 -- journal type
+    type           TEXT   NOT NULL,                 
     description    TEXT,
-    status         TEXT   NOT NULL,                 -- 'draft' | 'posted'
-    posted         TIMESTAMPTZ,                     -- NULL until posted
-    company_id     INT   NOT NULL,                  -- owning company
+    status         TEXT   NOT NULL,                 
+    posted         TIMESTAMPTZ,                     
+    version_id     INT NOT NULL,
+    company_id     INT   NOT NULL,                  
     record_id      BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY
+
 );
 
 CREATE TABLE GENERALJOURNALTRANS (

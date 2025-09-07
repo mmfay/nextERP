@@ -4,7 +4,9 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import PaginationControls from "@/app/components/Buttons/PaginationControls";
 import RecordControls from "@/app/components/Buttons/RecordControls";
+import PostControls from "@/app/components/Buttons/PostControls";
 import { fetchJournalLines, updateJournalTrans, deleteJournalLine } from "@/lib/api/general_ledger/journalLines";
+import { postGeneralJournal, validateGeneralJournal } from "@/lib/api/general_ledger/generalJournals";
 import AccountPicker from "@/app/components/FinancialDimensions/AccountPicker";
 import FDPicker from "@/app/components/FinancialDimensions/FinancialDimensionPicker";
 import { GeneralJournalTransLines, GeneralJournalTransPayload, GeneralJournalTransDelete, Dimensions} from "@/lib/api/general_ledger/types";
@@ -15,6 +17,7 @@ export default function JournalLinesPage() {
     // parameters and journal data
     const journalID                             = useSearchParams().get("id")!;
     const [isPosted, setIsPosted]               = useState(false);
+    const [version, setVersion]                 = useState(0);
     const [lines, setLines]                     = useState<GeneralJournalTransLines[]>([]);
     const [pageData, setPageData]               = useState<GeneralJournalTransLines[][]>([]);
 
@@ -75,12 +78,13 @@ export default function JournalLinesPage() {
             // fetch journal lines and its header.
             const page = await fetchJournalLines(journalID, { limit: 20 });
             const header = await fetchJournalHeader(journalID);
-        
+            
             // add to cache 
             setPageData([page.items]);
 
             // this will drive if the form is editable or not. 
             setIsPosted(header.status == "draft" ? false : true);
+            setVersion(header.versionID);
 
             // set the lines, if there is a next page and cursor for the next page.
             setRequestCursors([null]);
@@ -401,6 +405,34 @@ export default function JournalLinesPage() {
         setLines(updatedLines);
     };
 
+    // validates if a journal is ok to post
+    const validate = async () => {
+        const test = await validateGeneralJournal(journalID);
+        alert(JSON.stringify(test.message));
+    }
+
+    // validates and posts a journal
+    const post = async () => {
+        
+        // post attempt
+        const postAttempt = await postGeneralJournal(journalID, version);
+
+        if (!postAttempt.valid) {
+            alert(postAttempt.message);
+        }
+
+        if (!postAttempt.record) {
+            
+            console.warn("Post succeeded but no record returned");
+            return;
+        }
+
+        // status is likely "draft" | "posted" (string) -> convert to boolean
+        setIsPosted(postAttempt.record.status !== "draft");
+        setVersion(postAttempt.record.versionID); ay
+
+    }
+
     return (
         <div className="min-h-screen bg-inherit text-inherit font-[family-name:var(--font-geist-sans)] flex flex-col items-center">
             <main className="pt-24 px-4 md:px-8 w-full max-w-[1600px] 2xl:max-w-[1800px] space-y-4">
@@ -415,6 +447,13 @@ export default function JournalLinesPage() {
                             onDeleteDisabled={isPosted}
                             onSave={saveRecord}
                             onSaveDisabled={isPosted}
+                        />
+                        <PostControls
+                            loading={loading}
+                            onValidate={validate}
+                            onValidateDisabled={isPosted}
+                            onPost={post}
+                            onPostDisabled={isPosted}
                         />
                         <PaginationControls
                             loading={loading}

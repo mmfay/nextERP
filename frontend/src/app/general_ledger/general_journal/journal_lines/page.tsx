@@ -468,7 +468,10 @@ export default function JournalLinesPage() {
                     </div>
                 </div>
                 {/* Table */}
-                <div className="rounded-lg border border-black/20 shadow-sm">
+                <div 
+                    className="rounded-xl border border-black/10 dark:border-white/10
+                    shadow-md bg-white dark:bg-gray-900/60 overflow-hidden"
+                >
                     <div className="max-h-[70vh] overflow-auto">
                         <table className="w-full table-auto">
                             <thead className="sticky top-0 z-10 bg-gray-200 dark:bg-gray-800 text-gray-900 dark:text-white">
